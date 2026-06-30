@@ -1,0 +1,2727 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>点表智能工作台 - 系统设计可视化</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --text: #1f2937;
+      --muted: #64748b;
+      --line: #d8dee8;
+      --line-strong: #9aa7bb;
+      --brand: #0f766e;
+      --brand-2: #2563eb;
+      --amber: #b45309;
+      --green: #15803d;
+      --rose: #be123c;
+      --violet: #7c3aed;
+      --cyan: #0891b2;
+      --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      color: var(--text);
+      background: var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      overflow: auto;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 264px minmax(620px, 1fr) 352px;
+      height: 100vh;
+      min-height: 720px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px 16px;
+      border-right: 1px solid var(--line);
+      background: #eef3f8;
+    }
+
+    .brand {
+      display: grid;
+      gap: 8px;
+      padding: 0 8px 8px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.2;
+      font-weight: 760;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button {
+      width: 100%;
+      min-height: 54px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: #334155;
+      cursor: pointer;
+      text-align: left;
+      padding: 10px 12px;
+      transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .nav button:hover {
+      background: rgba(255, 255, 255, 0.72);
+      border-color: #dbe3ee;
+    }
+
+    .nav button.active {
+      color: #0f172a;
+      background: #ffffff;
+      border-color: #b8c5d7;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+    }
+
+    .nav strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.25;
+      font-weight: 750;
+    }
+
+    .nav span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .legend {
+      margin-top: auto;
+      padding: 12px;
+      border: 1px solid #d7e0eb;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    .legend h2,
+    .right h2,
+    .right h3 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .legend ul {
+      display: grid;
+      gap: 9px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+      color: #475569;
+      font-size: 12px;
+    }
+
+    .legend li {
+      display: grid;
+      grid-template-columns: 14px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--brand);
+    }
+
+    .dot.server { background: var(--brand-2); }
+    .dot.job { background: var(--amber); }
+    .dot.store { background: var(--violet); }
+    .dot.device { background: var(--green); }
+    .dot.risk { background: var(--rose); }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+      background: #f9fbfd;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .scene-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 820;
+    }
+
+    .scene-copy {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 940px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid #cfd8e5;
+      border-radius: var(--radius);
+      color: #0f172a;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover {
+      border-color: #94a3b8;
+      background: #f8fafc;
+    }
+
+    .speed {
+      display: grid;
+      grid-template-columns: auto 86px;
+      gap: 8px;
+      align-items: center;
+      padding: 0 4px 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .speed input {
+      width: 86px;
+      accent-color: var(--brand);
+    }
+
+    .canvas-shell {
+      position: relative;
+      min-height: 0;
+      padding: 16px 18px 10px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: 100%;
+      min-height: 480px;
+      border: 1px solid #d8e0eb;
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: default;
+    }
+
+    .canvas-note {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 26px;
+      padding: 4px 8px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.86);
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.2;
+      backdrop-filter: blur(8px);
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 0 18px 18px;
+    }
+
+    .timeline button {
+      min-width: 0;
+      min-height: 58px;
+      border: 1px solid #d6dfeb;
+      border-radius: var(--radius);
+      background: #ffffff;
+      color: #475569;
+      cursor: pointer;
+      padding: 8px;
+      text-align: left;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .timeline button:hover {
+      border-color: #9aa7bb;
+      background: #f8fafc;
+    }
+
+    .timeline button.active {
+      border-color: var(--brand);
+      background: #ecfdf5;
+      color: #134e4a;
+    }
+
+    .timeline .step-no {
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      margin-right: 6px;
+      border-radius: 50%;
+      color: #ffffff;
+      background: var(--brand);
+      font-size: 11px;
+      font-weight: 760;
+      vertical-align: top;
+    }
+
+    .timeline strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 730;
+    }
+
+    .timeline span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .right {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 18px 16px;
+      gap: 12px;
+      border-left: 1px solid var(--line);
+      background: #f1f5f9;
+      overflow-y: auto;
+    }
+
+    .panel {
+      border: 1px solid #d7e0eb;
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 13px;
+      border-bottom: 1px solid #e4e9f1;
+    }
+
+    .panel-body {
+      padding: 13px;
+    }
+
+    .detail-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.35;
+      font-weight: 790;
+    }
+
+    .detail-type {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #0f172a;
+      background: #eef6ff;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .detail-copy,
+    .step-copy {
+      margin: 0;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .kv {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .kv-row {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 8px 0;
+      border-top: 1px solid #eef2f7;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .kv-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .kv-row b {
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .kv-row span {
+      color: #1f2937;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 11px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 4px 8px;
+      border: 1px solid #d6dfeb;
+      border-radius: 999px;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .fact-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .fact-list li {
+      display: grid;
+      grid-template-columns: 9px 1fr;
+      gap: 8px;
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .fact-list li::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: var(--brand);
+    }
+
+    .mini-table {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mini-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 8px;
+      padding: 9px;
+      border: 1px solid #e1e7f0;
+      border-radius: var(--radius);
+      background: #fbfdff;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .mini-row b {
+      color: #334155;
+    }
+
+    .mini-row span {
+      color: #64748b;
+      overflow-wrap: anywhere;
+    }
+
+    .api-tools {
+      display: grid;
+      gap: 9px;
+    }
+
+    .api-search {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid #cfd8e5;
+      border-radius: var(--radius);
+      background: #ffffff;
+      color: #0f172a;
+      padding: 7px 9px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .api-search:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    }
+
+    .domain-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .domain-tabs button {
+      min-height: 25px;
+      border: 1px solid #d6dfeb;
+      border-radius: 999px;
+      background: #f8fafc;
+      color: #475569;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .domain-tabs button.active {
+      border-color: var(--brand);
+      background: #ecfdf5;
+      color: #134e4a;
+      font-weight: 720;
+    }
+
+    .api-list {
+      display: grid;
+      gap: 8px;
+      max-height: 390px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .api-item {
+      display: grid;
+      gap: 6px;
+      padding: 9px;
+      border: 1px solid #e1e7f0;
+      border-radius: var(--radius);
+      background: #fbfdff;
+    }
+
+    .api-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 7px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .method {
+      display: inline-grid;
+      place-items: center;
+      min-width: 44px;
+      min-height: 21px;
+      padding: 3px 6px;
+      border-radius: 5px;
+      color: #ffffff;
+      background: #475569;
+      font-size: 10px;
+      font-weight: 780;
+      line-height: 1;
+    }
+
+    .method.get { background: #2563eb; }
+    .method.post { background: #15803d; }
+    .method.ws { background: #7c3aed; }
+    .method.sse { background: #0891b2; }
+    .method.bridge { background: #0f766e; }
+    .method.policy { background: #64748b; }
+    .method.external { background: #b45309; }
+
+    .endpoint {
+      color: #0f172a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .api-name {
+      color: #334155;
+      font-size: 12px;
+      font-weight: 740;
+      line-height: 1.35;
+    }
+
+    .api-desc {
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .api-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .api-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #475569;
+      font-size: 10px;
+      line-height: 1.1;
+    }
+
+    @media (max-width: 1180px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        grid-template-columns: 220px minmax(520px, 1fr);
+        grid-template-rows: minmax(720px, auto) auto;
+        height: auto;
+      }
+
+      .right {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .canvas-wrap {
+        min-height: 520px;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr;
+      }
+
+      .right {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>系统设计可视化</h1>
+        <p>把点表智能工作台拆成角色、链路、数据和演进阶段，帮助快速建立整体心智模型。</p>
+      </div>
+
+      <nav class="nav" id="sceneNav" aria-label="系统视图"></nav>
+
+      <section class="legend" aria-label="图例">
+        <h2>颜色图例</h2>
+        <ul>
+          <li><span class="dot"></span><span>本地桌面与工程目录</span></li>
+          <li><span class="dot server"></span><span>云端后端与 API</span></li>
+          <li><span class="dot job"></span><span>生成任务与 jobfs</span></li>
+          <li><span class="dot store"></span><span>数据库/索引/审计</span></li>
+          <li><span class="dot device"></span><span>现场设备与 xboard</span></li>
+          <li><span class="dot risk"></span><span>待建设或风险点</span></li>
+        </ul>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="title-block">
+          <p class="eyebrow" id="eyebrow">系统拓扑</p>
+          <h2 class="scene-title" id="sceneTitle">整体 C/S 架构</h2>
+          <p class="scene-copy" id="sceneCopy"></p>
+        </div>
+        <div class="controls" aria-label="动画控制">
+          <button class="icon-btn" id="prevBtn" title="上一步" aria-label="上一步">‹</button>
+          <button class="icon-btn" id="playBtn" title="播放/暂停" aria-label="播放/暂停">Ⅱ</button>
+          <button class="icon-btn" id="nextBtn" title="下一步" aria-label="下一步">›</button>
+          <label class="speed">
+            速度
+            <input id="speedRange" type="range" min="0.5" max="2.4" step="0.1" value="1" />
+          </label>
+        </div>
+      </header>
+
+      <section class="canvas-shell">
+        <div class="canvas-wrap">
+          <canvas id="mapCanvas"></canvas>
+          <div class="canvas-note" id="canvasNote"></div>
+        </div>
+      </section>
+
+      <section class="timeline" id="timeline" aria-label="当前视图步骤"></section>
+    </main>
+
+    <aside class="right">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>当前步骤</h2>
+          <span class="detail-type" id="stepIndex">1 / 5</span>
+        </div>
+        <div class="panel-body">
+          <h3 class="detail-title" id="stepTitle"></h3>
+          <p class="step-copy" id="stepCopy"></p>
+          <div class="pill-list" id="stepTags"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>选中节点</h2>
+          <span class="detail-type" id="nodeType">节点</span>
+        </div>
+        <div class="panel-body">
+          <h3 class="detail-title" id="nodeTitle"></h3>
+          <p class="detail-copy" id="nodeCopy"></p>
+          <div class="kv" id="nodeKV"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>设计要点</h2>
+        </div>
+        <div class="panel-body">
+          <ul class="fact-list" id="facts"></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>存储边界</h2>
+        </div>
+        <div class="panel-body">
+          <div class="mini-table" id="storageTable"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>API 目录</h2>
+          <span class="detail-type" id="apiCount">0</span>
+        </div>
+        <div class="panel-body api-tools">
+          <input class="api-search" id="apiSearch" type="search" placeholder="搜索路径、方法、说明、域名" />
+          <div class="domain-tabs" id="apiDomainTabs"></div>
+          <div class="api-list" id="apiList"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    const palette = {
+      local: "#0f766e",
+      server: "#2563eb",
+      job: "#b45309",
+      store: "#7c3aed",
+      device: "#15803d",
+      external: "#0891b2",
+      risk: "#be123c",
+      neutral: "#475569"
+    };
+
+    const sharedNodes = {
+      ui: {
+        id: "ui",
+        label: "前端 UI\n三栏工作台",
+        type: "本地桌面",
+        color: "local",
+        detail: "工程师看到的主界面。负责项目导航、点表编辑、证据查看、澄清处理和 AI 调试面板。",
+        fields: {
+          "所在位置": "工程师电脑",
+          "主要输入": "协议文档、人工确认、调试决策",
+          "主要输出": "生成任务、澄清答案、apply 决策、发布动作"
+        }
+      },
+      bridge: {
+        id: "bridge",
+        label: "Wails Go Bridge\n本地能力层",
+        type: "桌面 Bridge",
+        color: "local",
+        detail: "Bridge 是桌面 App 里的本地 Go 层。它把前端和本机能力连接起来，包括工程目录、串口/TCP、WSS 设备隧道和本地配置。",
+        fields: {
+          "代码位置": "ai-point-web/desktop/app.go",
+          "典型方法": "SaveDSL、SendFrame、ListSerialPorts、SubmitToServer",
+          "关键边界": "设备接在工程师电脑上，云端通过 Bridge 间接访问"
+        }
+      },
+      localfs: {
+        id: "localfs",
+        label: "本地工程目录\npoint_table.json 权威",
+        type: "本地存储",
+        color: "local",
+        detail: "最终点表以本机 JSON DSL 为权威数据源。xlsx 是副本，evidence/debug/session 是辅助产物。",
+        fields: {
+          "核心文件": "tasks/{task_id}/point_table.json",
+          "副本文件": "point_table.xlsx、evidence.json",
+          "会话文件": "clarifications/、debug/、sessions/"
+        }
+      },
+      device: {
+        id: "device",
+        label: "现场物理设备\n串口 / TCP",
+        type: "现场设备",
+        color: "device",
+        detail: "真实设备通过串口、Modbus RTU、Modbus TCP 等本地链路接入工程师电脑，不直接接云端。",
+        fields: {
+          "连接对象": "工程师电脑上的 Bridge",
+          "数据形态": "请求帧、响应帧、原始 hex、解析值",
+          "作用": "验证 AI 生成的寄存器、功能码、解析函数是否正确"
+        }
+      },
+      api: {
+        id: "api",
+        label: "云端 API 网关\nHTTP / SSE / WSS",
+        type: "云端后端",
+        color: "server",
+        detail: "统一 Go/Gin 后端入口。承接生成、下载、证据、调试、发布、xcmdb 兼容和设备代理。",
+        fields: {
+          "当前端点": "约 23 个已有端点",
+          "目标能力": "工程/任务、OCR、澄清、进度推送、鉴权",
+          "认证目标": "Bearer Token + project_id 隔离"
+        }
+      },
+      pipeline: {
+        id: "pipeline",
+        label: "OCR + Agent Pipeline\n解析 / 生成 / 修正",
+        type: "AI 编排",
+        color: "server",
+        detail: "后端编排 OCR、协议解析、点位发现、地址推断、命名、证据链、调试 triage/fix 等 Agent。",
+        fields: {
+          "输入": "协议 Markdown、OCR content_list、人工澄清、采集值",
+          "输出": "merged.json、evidence.json、调试 rounds/（自动应用留痕）、xlsx",
+          "外部依赖": "MinerU API、OpenAI Compatible LLM"
+        }
+      },
+      tunnel: {
+        id: "tunnel",
+        label: "设备隧道代理\nxboard 帧转发",
+        type: "云端代理",
+        color: "server",
+        detail: "xboard 的采集请求先到云端后端，再通过 WSS 发给本地 Bridge，由 Bridge 转到现场设备，响应按原路返回。",
+        fields: {
+          "为什么需要": "xboard 在云端，设备在现场本机",
+          "链路": "xboard -> 云端代理 -> WSS -> Bridge -> 串口/TCP",
+          "状态": "目标态 P1/M3 能力"
+        }
+      },
+      jobfs: {
+        id: "jobfs",
+        label: "JobFS\n生成与调试产物",
+        type: "任务文件系统",
+        color: "job",
+        detail: "服务器端的执行环境。保存 run 状态、协议副本、版本目录、证据链和调试产物，完成后可按 TTL 清理。",
+        fields: {
+          "路径": "jobs/{run_id}/versions/vN/",
+          "典型文件": "status.json、merged.json、layout.json、evidence.json",
+          "边界": "不是最终点表权威，只是执行和交付来源"
+        }
+      },
+      sqlite: {
+        id: "sqlite",
+        label: "SQLite\nCMDB / Run 索引",
+        type: "服务器数据库",
+        color: "store",
+        detail: "服务器数据库管项目、协议点表任务、run 索引、CMDB、规则包和工程用量汇总，不存完整点表正文。",
+        fields: {
+          "当前已有": "devices、resource_seq",
+          "目标新增": "projects、device_tasks、runs、rule_packs、project_usage",
+          "关键指针": "devices.xlsx_path、canonical_version"
+        }
+      },
+      xboard: {
+        id: "xboard",
+        label: "xboard 试运行间\n采集实例",
+        type: "云端系统",
+        color: "device",
+        detail: "xboard 加载点表并发起采集请求。它通过后端设备代理间接访问现场设备，并提供 collect/value 给 AI 调试。",
+        fields: {
+          "接口": "/update、/status、/collect/value",
+          "输入": "点表 xlsx、设备代理响应",
+          "输出": "采集值、状态、异常点"
+        }
+      },
+      mineru: {
+        id: "mineru",
+        label: "MinerU OCR\nPDF / 图片解析",
+        type: "OCR 服务",
+        color: "external",
+        detail: "Go 后端调用 MinerU API 的 8001 端口，把 PDF/Word/图片转换为 Markdown、content_list 和 images。",
+        fields: {
+          "API 地址": "http://192.168.20.99:8001",
+          "VLM 地址": "http://mineru-openai-server:30000",
+          "结果": "Markdown、content_list、images ZIP"
+        }
+      },
+      llm: {
+        id: "llm",
+        label: "LLM API\n推理与修正",
+        type: "外部 AI",
+        color: "external",
+        detail: "后端通过 OpenAI Compatible API 调用模型，用于协议理解、点位推断、命名、澄清和调试修正。",
+        fields: {
+          "调用方": "后端 Agent 层",
+          "配置": "云端后端统一配置，客户端不可修改",
+          "策略": "指数退避、内部观测、Eval 评估"
+        }
+      },
+      xcmdb: {
+        id: "xcmdb",
+        label: "xcmdb 兼容接口\ninfo / list / count",
+        type: "后端内置接口",
+        color: "server",
+        detail: "这不是独立服务，而是本 Go 后端内置的兼容接口域。它只提供 info、list、count 给 xboard 查询已生成点表的设备信息。",
+        fields: {
+          "接口域": "/api/v3/link/board/*",
+          "调用方": "xboard",
+          "边界": "桌面端、工程师和外部用户不直接调用"
+        }
+      },
+
+      apiDesign: {
+        navTitle: "API 设计",
+        navHint: "服务端端点与 Bridge 方法",
+        eyebrow: "接口契约",
+        title: "API 设计全景",
+        copy: "T4 的接口设计按 A-L 域组织，服务端负责 HTTP/SSE/WS，桌面 Bridge 负责本机能力。右侧 API 目录可以按域过滤或搜索路径。",
+        notes: ["A-L 域完整目录", "含现有与规划端点", "含本地 Bridge 方法"],
+        facts: [
+          "主业务 API 统一走 /api/v1；后端内置 xcmdb 兼容接口保留 /api/v3。",
+          "生成进度用 SSE，调试实时值和原始帧日志用 WebSocket。",
+          "Bearer Token 是目标鉴权方式，/health 豁免，WS 通过 query token 鉴权。",
+          "本地文件、串口/TCP、DSL 落盘和提交封装在 Wails Bridge 方法里。"
+        ],
+        storage: [
+          ["服务端 API", "A-L 12 个域，覆盖工程、OCR、生成、澄清、增量、点表、证据、调试、提交、规则、xcmdb、健康检查"],
+          ["实时协议", "C-2 生成进度 SSE；H-9 实时值 WS；H-10 报文日志 WS；H-10a 设备帧代理链路"],
+          ["本地 Bridge", "12 个方法，覆盖工程目录、配置、串口、DSL、导出、校验、提交和规则包版本"]
+        ],
+        groups: [
+          { label: "服务端 HTTP / SSE / WS API", x: 40, y: 48, w: 820, h: 584, color: "server" },
+          { label: "本地 Wails Bridge", x: 906, y: 48, w: 238, h: 280, color: "local" },
+          { label: "横切约束", x: 906, y: 360, w: 238, h: 272, color: "store" }
+        ],
+        nodes: {
+          apiGate: {
+            x: 380,
+            y: 282,
+            w: 150,
+            h: 82,
+            label: "API 网关\n/api/v1",
+            type: "服务端入口",
+            color: "server",
+            detail: "统一 Go/Gin 入口，承接 HTTP、SSE、WebSocket 和 xcmdb 兼容接口。",
+            fields: {
+              "主版本": "/api/v1",
+              "兼容版本": "/api/v3/link/board/*",
+              "鉴权": "Bearer Token（目标态）"
+            }
+          },
+          apiA: {
+            x: 82,
+            y: 92,
+            w: 176,
+            h: 64,
+            label: "A 工程/任务\n0+7",
+            type: "API 域",
+            color: "server",
+            apiDomain: "A",
+            detail: "工程和协议点表任务管理，提供项目隔离、任务列表和状态查询。",
+            fields: { "接口数": "7", "里程碑": "M1", "状态": "全部新增" }
+          },
+          apiB: {
+            x: 300,
+            y: 92,
+            w: 176,
+            h: 64,
+            label: "B 文档/OCR\n0+5",
+            type: "API 域",
+            color: "server",
+            apiDomain: "B",
+            detail: "协议文档上传、OCR 状态、分页内容和失败页重试，后端对接 MinerU。",
+            fields: { "接口数": "5 + MinerU 依赖", "里程碑": "M1", "状态": "全部新增" }
+          },
+          apiC: {
+            x: 518,
+            y: 92,
+            w: 176,
+            h: 64,
+            label: "C 点表生成\n2+3",
+            type: "API 域",
+            color: "server",
+            apiDomain: "C",
+            detail: "提交生成任务、获取 run 状态和生成进度 SSE。",
+            fields: { "接口数": "3", "里程碑": "M1", "重点": "generate + progress SSE" }
+          },
+          apiD: {
+            x: 82,
+            y: 200,
+            w: 176,
+            h: 64,
+            label: "D 澄清队列\n0+4",
+            type: "API 域",
+            color: "server",
+            apiDomain: "D",
+            detail: "AI 不确定项的澄清列表、单条回答、全部采纳和 apply 合并。",
+            fields: { "接口数": "4", "里程碑": "M1", "状态": "规划新增" }
+          },
+          apiE: {
+            x: 648,
+            y: 200,
+            w: 176,
+            h: 64,
+            label: "E 增量文档\n0+4",
+            type: "API 域",
+            color: "server",
+            apiDomain: "E",
+            detail: "上传补充/变更文档，生成增量 change-set 并支持裁决。",
+            fields: { "接口数": "4", "里程碑": "M2", "状态": "规划新增" }
+          },
+          apiF: {
+            x: 82,
+            y: 402,
+            w: 176,
+            h: 64,
+            label: "F 点表数据\n现有+扩展",
+            type: "API 域",
+            color: "server",
+            apiDomain: "F",
+            detail: "点表数据、选择 overlay、版本、canonical、下载和发布。",
+            fields: { "接口数": "7", "里程碑": "M1", "重点": "points / versions / publish" }
+          },
+          apiG: {
+            x: 300,
+            y: 504,
+            w: 176,
+            h: 64,
+            label: "G 证据链\n2+0",
+            type: "API 域",
+            color: "server",
+            apiDomain: "G",
+            detail: "run 级证据和字段级证据查询，用于 AI 解释和人工复核。",
+            fields: { "接口数": "2", "里程碑": "M1", "状态": "现有" }
+          },
+          apiH: {
+            x: 648,
+            y: 402,
+            w: 176,
+            h: 64,
+            label: "H 调试/Harness\n现有+新增",
+            type: "API 域",
+            color: "server",
+            apiDomain: "H",
+            detail: "调试启动、采集、变更决策、apply、实时值、报文、命令画像和调参假设。",
+            fields: { "接口数": "12 + 设备代理链路", "里程碑": "M3", "重点": "debug + WS + harness" }
+          },
+          apiI: {
+            x: 82,
+            y: 504,
+            w: 176,
+            h: 64,
+            label: "I 确认/提交\n0+3",
+            type: "API 域",
+            color: "server",
+            apiDomain: "I",
+            detail: "人工确认、确认状态和快捷提交，含质量门禁和幂等回执。",
+            fields: { "接口数": "3", "里程碑": "M2", "状态": "规划新增" }
+          },
+          apiJ: {
+            x: 648,
+            y: 504,
+            w: 176,
+            h: 64,
+            label: "J 规则/工程用量\n0+3",
+            type: "API 域",
+            color: "server",
+            apiDomain: "J",
+            detail: "规则包版本、检查更新和工程级用量概览；不返回 token 或模型明细。",
+            fields: { "接口数": "3", "里程碑": "M2", "状态": "规划新增" }
+          },
+          apiK: {
+            x: 300,
+            y: 200,
+            w: 176,
+            h: 64,
+            label: "K xcmdb 兼容\n3+0",
+            type: "API 域",
+            color: "store",
+            apiDomain: "K",
+            detail: "保留 xcmdb /api/v3/link/board/* 兼容接口，供 xboard 查询设备信息；它不是独立服务。",
+            fields: { "接口数": "3", "里程碑": "现有", "版本": "/api/v3" }
+          },
+          apiL: {
+            x: 518,
+            y: 200,
+            w: 176,
+            h: 64,
+            label: "L 健康检查\n1+0",
+            type: "API 域",
+            color: "store",
+            apiDomain: "L",
+            detail: "/health 健康检查接口，返回服务可用性，不走鉴权。",
+            fields: { "接口数": "1", "里程碑": "现有", "鉴权": "豁免" }
+          },
+          apiBridge: {
+            x: 944,
+            y: 108,
+            w: 162,
+            h: 82,
+            label: "Bridge 方法\n8+4",
+            type: "本地接口",
+            color: "local",
+            apiDomain: "Bridge",
+            detail: "通过 Wails JS Bindings 暴露给前端，负责本机目录、配置、串口、DSL、导出、校验和提交。",
+            fields: { "接口数": "12", "调用路径": "前端 JS -> Wails IPC -> Go App", "运行位置": "工程师电脑" }
+          },
+          apiRealtime: {
+            x: 944,
+            y: 220,
+            w: 162,
+            h: 70,
+            label: "实时协议\nSSE / WS",
+            type: "实时接口",
+            color: "external",
+            apiDomain: "Realtime",
+            detail: "生成进度用 SSE；调试值、原始帧和设备帧代理使用 WebSocket/WSS。",
+            fields: { "SSE": "C-2 progress", "WS": "H-9 realtime、H-10 frames", "WSS": "H-10a 设备代理链路" }
+          },
+          apiPolicy: {
+            x: 944,
+            y: 422,
+            w: 162,
+            h: 82,
+            label: "响应/鉴权/版本\nPolicy",
+            type: "横切约束",
+            color: "store",
+            apiDomain: "Policy",
+            detail: "统一成功/错误响应、HTTP 状态码、Bearer Token 鉴权和 API 版本策略。",
+            fields: { "成功": "直接返回业务对象", "错误": "{error, code, details}", "版本": "/api/v1 + 内置 xcmdb /api/v3" }
+          }
+        },
+        baseEdges: [
+          ["apiGate", "apiA"], ["apiGate", "apiB"], ["apiGate", "apiC"], ["apiGate", "apiD"],
+          ["apiGate", "apiE"], ["apiGate", "apiF"], ["apiGate", "apiG"], ["apiGate", "apiH"],
+          ["apiGate", "apiI"], ["apiGate", "apiJ"], ["apiGate", "apiK"], ["apiGate", "apiL"],
+          ["apiBridge", "apiGate"], ["apiRealtime", "apiGate"], ["apiPolicy", "apiGate"]
+        ],
+        steps: [
+          {
+            title: "A-L 域统一从 API 网关进入",
+            copy: "服务端接口被分成 12 个域，主业务统一 /api/v1，后端内置 xcmdb 兼容接口保留 /api/v3。",
+            tags: ["HTTP API", "/api/v1", "A-L"],
+            edges: [["apiGate", "apiA"], ["apiGate", "apiB"], ["apiGate", "apiC"], ["apiGate", "apiH"]],
+            focus: "apiGate",
+            apiDomain: "all"
+          },
+          {
+            title: "M1 先打通工程、文档、生成、澄清",
+            copy: "M1 的重点是工程/任务、文档/OCR、生成进度、澄清队列和点表数据领取。",
+            tags: ["M1", "项目", "生成"],
+            edges: [["apiGate", "apiA"], ["apiGate", "apiB"], ["apiGate", "apiC"], ["apiGate", "apiD"], ["apiGate", "apiF"]],
+            focus: "apiC",
+            apiDomain: "C"
+          },
+          {
+            title: "M2 补增量、确认提交、规则和用量",
+            copy: "M2 让产品从生成工具变成可协作交付工具，补齐增量文档、质量确认、提交回执和工程用量展示。",
+            tags: ["M2", "增量", "提交"],
+            edges: [["apiGate", "apiE"], ["apiGate", "apiI"], ["apiGate", "apiJ"]],
+            focus: "apiE",
+            apiDomain: "E"
+          },
+          {
+            title: "M3 完成调试和设备代理",
+            copy: "H 域承接 xboard 调试、实时采集值、报文日志、设备帧代理、命令画像和 Harness 假设。",
+            tags: ["M3", "debug", "WebSocket"],
+            edges: [["apiGate", "apiH"], ["apiRealtime", "apiGate"], ["apiBridge", "apiGate"]],
+            focus: "apiH",
+            apiDomain: "H"
+          },
+          {
+            title: "Bridge 负责本机能力",
+            copy: "Bridge 方法不是远程 HTTP API，而是 Wails 本地 IPC：目录、配置、串口、DSL、导出、校验、提交。",
+            tags: ["Bridge", "Wails IPC", "本机能力"],
+            edges: [["apiBridge", "apiGate"], ["apiPolicy", "apiGate"]],
+            focus: "apiBridge",
+            apiDomain: "Bridge"
+          }
+        ]
+      }
+    };
+
+    const apiCatalog = [
+      { domain: "A", domainName: "工程/任务管理", method: "POST", path: "/api/v1/projects", name: "A-1 创建工程", status: "新增", milestone: "M1", desc: "创建服务器工程元数据；本地工程目录由 Bridge 独立创建。" },
+      { domain: "A", domainName: "工程/任务管理", method: "GET", path: "/api/v1/projects", name: "A-2 工程列表", status: "新增", milestone: "M1", desc: "返回当前 Token 用户可访问的工程列表。" },
+      { domain: "A", domainName: "工程/任务管理", method: "GET", path: "/api/v1/projects/:project_id", name: "A-3 工程详情", status: "新增", milestone: "M1", desc: "返回单工程对象和任务统计。" },
+      { domain: "A", domainName: "工程/任务管理", method: "POST", path: "/api/v1/projects/:project_id/tasks", name: "A-4 创建协议点表任务", status: "新增", milestone: "M1", desc: "在工程下建立独立协议点表任务；通常由导入协议建点表自动创建。" },
+      { domain: "A", domainName: "工程/任务管理", method: "GET", path: "/api/v1/projects/:project_id/tasks", name: "A-5 协议点表任务列表", status: "新增", milestone: "M1", desc: "按状态分页返回工程下的协议点表任务。" },
+      { domain: "A", domainName: "工程/任务管理", method: "GET", path: "/api/v1/projects/:project_id/tasks/:task_id", name: "A-6 协议点表任务详情", status: "新增", milestone: "M1", desc: "返回任务元数据和最新 run_id。" },
+      { domain: "A", domainName: "工程/任务管理", method: "GET", path: "/api/v1/projects/:project_id/tasks/:task_id/status", name: "A-7 任务状态查询", status: "新增", milestone: "M1", desc: "轻量查询任务状态，用于轮询更新。" },
+
+      { domain: "B", domainName: "文档上传与解析", method: "POST", path: "/api/v1/tasks/:task_id/documents", name: "B-1 上传协议文档", status: "新增", milestone: "M1", desc: "上传协议到某个任务，触发 OCR/解析；主文档首次解析完成后自动触发生成。" },
+      { domain: "B", domainName: "文档上传与解析", method: "GET", path: "/api/v1/tasks/:task_id/documents", name: "B-2 文档列表", status: "新增", milestone: "M1", desc: "返回任务下所有协议文档及解析状态。" },
+      { domain: "B", domainName: "文档上传与解析", method: "GET", path: "/api/v1/tasks/:task_id/documents/:doc_id", name: "B-3 OCR 任务状态", status: "新增", milestone: "M1", desc: "轮询单个文档的 OCR/解析状态和失败页。" },
+      { domain: "B", domainName: "文档上传与解析", method: "GET", path: "/api/v1/tasks/:task_id/documents/:doc_id/pages", name: "B-4 文档解析结果分页", status: "新增", milestone: "M1", desc: "返回 OCR 页面内容，包含 raw/ocr 文本和页码信息。" },
+      { domain: "B", domainName: "文档上传与解析", method: "POST", path: "/api/v1/tasks/:task_id/documents/:doc_id/pages/:page_no/retry", name: "B-5 重试失败页", status: "新增", milestone: "M1", desc: "对单页 OCR 失败结果重新解析，可带裁剪参数。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "POST http://192.168.20.99:8001/file_parse", name: "MinerU 同步解析", status: "外部", milestone: "M1", desc: "Go 后端调用 MinerU API 解析单文件，返回 ZIP。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "POST /tasks", name: "MinerU 异步任务提交", status: "外部", milestone: "后续", desc: "大文件或批量导入时提交异步解析任务。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "GET /tasks/{task_id}", name: "MinerU 任务状态", status: "外部", milestone: "后续", desc: "查询 MinerU 异步任务状态。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "GET /tasks/{task_id}/result", name: "MinerU 任务结果", status: "外部", milestone: "后续", desc: "获取异步解析结果。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "GET http://192.168.20.99:8001/health", name: "MinerU API 健康检查", status: "外部", milestone: "运维", desc: "检查 MinerU API 8001 服务健康。" },
+      { domain: "B", domainName: "MinerU 外部依赖", method: "EXTERNAL", path: "GET http://192.168.20.99:30000/health", name: "MinerU VLM 健康检查", status: "外部", milestone: "运维", desc: "检查 VLM Server 30000 服务健康。" },
+
+      { domain: "C", domainName: "点表生成", method: "POST", path: "/api/v1/point-table/generate", name: "C-1 提交生成任务", status: "现有扩展", milestone: "M1", desc: "触发某个 task_id 的多 Agent 点表生成；首次导入主文档解析完成后自动调用。" },
+      { domain: "C", domainName: "点表生成", method: "SSE", path: "/api/v1/point-table/runs/:run_id/progress", name: "C-2 生成进度推送", status: "新增", milestone: "M1", desc: "Server-Sent Events 推送生成阶段、进度和消息，不暴露 token 明细。" },
+      { domain: "C", domainName: "点表生成", method: "GET", path: "/api/v1/point-table/runs/:run_id", name: "C-3 获取 Run 状态", status: "现有", milestone: "M1", desc: "查询生成 Job 状态、board_type、xlsx_path、错误和完成时间。" },
+
+      { domain: "D", domainName: "澄清队列", method: "GET", path: "/api/v1/point-table/runs/:run_id/clarifications", name: "D-1 获取澄清列表", status: "新增", milestone: "M1", desc: "返回 pending/answered/skipped 澄清项、选项、推荐和证据。" },
+      { domain: "D", domainName: "澄清队列", method: "POST", path: "/api/v1/point-table/runs/:run_id/clarifications/:clarification_id/answer", name: "D-2 提交单条答案", status: "新增", milestone: "M1", desc: "提交工程师对单条澄清项的选择。" },
+      { domain: "D", domainName: "澄清队列", method: "POST", path: "/api/v1/point-table/runs/:run_id/clarifications/accept-all-recommended", name: "D-3 全部采纳推荐", status: "新增", milestone: "M1", desc: "批量采纳所有 pending 澄清项的 AI 推荐答案。" },
+      { domain: "D", domainName: "澄清队列", method: "POST", path: "/api/v1/point-table/runs/:run_id/clarifications/apply", name: "D-4 澄清合并", status: "新增", milestone: "M1", desc: "所有澄清处理完后触发重新合并，状态进入 reviewing。" },
+
+      { domain: "E", domainName: "增量文档分析", method: "POST", path: "/api/v1/point-table/runs/:run_id/incremental-docs", name: "E-1 上传补充/变更文档", status: "新增", milestone: "M2", desc: "上传变更说明，触发增量影响分析，不重跑全表。" },
+      { domain: "E", domainName: "增量文档分析", method: "GET", path: "/api/v1/point-table/runs/:run_id/change-set", name: "E-2 获取增量变更清单", status: "新增", milestone: "M2", desc: "返回新增点、字段变更、不适用等 change-set。" },
+      { domain: "E", domainName: "增量文档分析", method: "POST", path: "/api/v1/point-table/runs/:run_id/change-set/:change_id/decide", name: "E-3 单条变更裁决", status: "新增", milestone: "M2", desc: "接受或拒绝单条增量变更。" },
+      { domain: "E", domainName: "增量文档分析", method: "POST", path: "/api/v1/point-table/runs/:run_id/change-set/decide-batch", name: "E-4 批量裁决", status: "新增", milestone: "M2", desc: "批量接受或拒绝增量变更项。" },
+
+      { domain: "F", domainName: "点表数据", method: "GET", path: "/api/v1/point-table/runs/:run_id/points", name: "F-1 获取点表数据", status: "现有扩展", milestone: "M1", desc: "按 version/sheet 返回 read/write/commands/device_info，目标对齐 JSON DSL。" },
+      { domain: "F", domainName: "点表数据", method: "GET", path: "/api/v1/point-table/runs/:run_id/selections", name: "F-2a 获取人工选择 overlay", status: "现有", milestone: "M1", desc: "读取被 disable/enable 的点位选择覆盖。" },
+      { domain: "F", domainName: "点表数据", method: "POST", path: "/api/v1/point-table/runs/:run_id/selections", name: "F-2b 设置人工选择 overlay", status: "现有", milestone: "M1", desc: "保存点位启用/禁用选择。" },
+      { domain: "F", domainName: "点表数据", method: "GET", path: "/api/v1/point-table/runs/:run_id/versions", name: "F-3 版本列表", status: "现有", milestone: "M1", desc: "返回 run 下所有版本和 canonical 指针。" },
+      { domain: "F", domainName: "点表数据", method: "POST", path: "/api/v1/point-table/runs/:run_id/canonical", name: "F-4 设为基线", status: "现有", milestone: "M1", desc: "切换 canonical 版本。" },
+      { domain: "F", domainName: "点表数据", method: "GET", path: "/api/v1/point-table/runs/:run_id/download", name: "F-5 下载点表文件", status: "现有", milestone: "M1", desc: "下载 canonical 或指定版本 xlsx 文件。" },
+      { domain: "F", domainName: "点表数据", method: "POST", path: "/api/v1/point-table/runs/:run_id/publish", name: "F-6 发布到 xboard", status: "现有需修复", milestone: "M1", desc: "发布点表到 xboard；spot_drift 未确认时目标返回 409。" },
+
+      { domain: "G", domainName: "证据链", method: "GET", path: "/api/v1/point-table/runs/:run_id/evidence", name: "G-1 获取 Run 级证据", status: "现有", milestone: "M1", desc: "返回 run 下所有字段证据项。" },
+      { domain: "G", domainName: "证据链", method: "GET", path: "/api/v1/point-table/runs/:run_id/evidence/field?sheet=read&seq=7&column=scale", name: "G-2 获取字段级证据", status: "现有", milestone: "M1", desc: "按 sheet、seq、column 查询单字段证据。" },
+
+      { domain: "H", domainName: "调试与 Harness", method: "POST", path: "/api/v1/point-table/runs/:run_id/debug", name: "H-1 发起调试", status: "现有", milestone: "M3", desc: "基于 run 发起 xboard 调试任务。" },
+      { domain: "H", domainName: "调试与 Harness", method: "POST", path: "/api/v1/point-table/devices/:resource_id/debug", name: "H-2 按资源发起调试", status: "现有", milestone: "M3", desc: "通过 resource_id 自动关联最新 run 并调试。" },
+      { domain: "H", domainName: "调试与 Harness", method: "GET", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id", name: "H-3 获取调试会话", status: "现有", milestone: "M3", desc: "查询调试会话状态和轮次，不暴露 token 明细。" },
+      { domain: "H", domainName: "调试与 Harness", method: "GET", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/changes", name: "H-4 获取变更集", status: "现有", milestone: "M3", desc: "返回 AI 生成的待评审 changeset。" },
+      { domain: "H", domainName: "调试与 Harness", method: "POST", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/changes/:change_id/decision", name: "H-5 单条变更决策", status: "现有", milestone: "M3", desc: "接受或拒绝单条调试变更。" },
+      { domain: "H", domainName: "调试与 Harness", method: "POST", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/decisions", name: "H-6 批量变更决策", status: "现有", milestone: "M3", desc: "按 change_id 或 seq 批量裁决变更。" },
+      { domain: "H", domainName: "调试与 Harness", method: "POST", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/apply", name: "H-7 Apply 变更", status: "现有", milestone: "M3", desc: "把已接受变更应用为新版本，并做基线冲突检查。" },
+      { domain: "H", domainName: "调试与 Harness", method: "GET", path: "/api/v1/point-table/devices/:resource_id/runs", name: "H-8 查询设备所有 Run", status: "现有", milestone: "M3", desc: "按 resource_id 返回历史 run 列表。" },
+      { domain: "H", domainName: "调试与 Harness", method: "WS", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/realtime", name: "H-9 调试实时值 WebSocket", status: "新增", milestone: "M3", desc: "推送实时采集值与判定状态。" },
+      { domain: "H", domainName: "调试与 Harness", method: "WS", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/frames", name: "H-10 收发报文 WebSocket", status: "新增", milestone: "M3", desc: "推送原始 Modbus TX/RX 报文日志。" },
+      { domain: "H", domainName: "调试与 Harness", method: "WS", path: "xboard -> 后端设备代理 -> WSS -> Bridge -> 设备", name: "H-10a 设备帧代理链路", status: "新增", milestone: "M3", desc: "xboard 采集请求通过云端代理和本地 Bridge 透传到现场设备并原路返回。" },
+      { domain: "H", domainName: "调试与 Harness", method: "GET", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/command-profiles", name: "H-11 命令画像", status: "新增", milestone: "M3", desc: "返回命令响应时间、抖动、成功率、帧大小等性能画像。" },
+      { domain: "H", domainName: "调试与 Harness", method: "GET", path: "/api/v1/point-table/runs/:run_id/debug/:debug_id/hypotheses", name: "H-12 Harness 调参假设", status: "新增", milestone: "M3", desc: "返回 Harness 每轮产生的调参假设、diff 和验证结果。" },
+
+      { domain: "I", domainName: "确认与提交", method: "POST", path: "/api/v1/point-table/runs/:run_id/confirm", name: "I-1 执行确认", status: "新增", milestone: "M2", desc: "人工确认点表，生成确认记录并执行质量门禁。" },
+      { domain: "I", domainName: "确认与提交", method: "GET", path: "/api/v1/point-table/runs/:run_id/confirm", name: "I-2 获取确认状态", status: "新增", milestone: "M2", desc: "查询确认记录或门禁阻塞原因。" },
+      { domain: "I", domainName: "确认与提交", method: "POST", path: "/api/v1/point-table/runs/:run_id/submit", name: "I-3 快捷提交", status: "新增", milestone: "M2", desc: "将已确认点表幂等提交到远端在线点表服务器。" },
+
+      { domain: "J", domainName: "规则包与工程用量", method: "GET", path: "/api/v1/rule-pack", name: "J-1 获取规则包版本", status: "新增", milestone: "M2", desc: "返回当前规则包版本、发布时间和规则数量。" },
+      { domain: "J", domainName: "规则包与工程用量", method: "POST", path: "/api/v1/rule-pack/check-update", name: "J-2 检查更新", status: "新增", milestone: "M2", desc: "检查本地规则包是否需要更新。" },
+      { domain: "J", domainName: "规则包与工程用量", method: "GET", path: "/api/v1/projects/:project_id/usage-summary", name: "J-3 获取工程用量", status: "新增", milestone: "M2", desc: "返回工程级用量金额/指标，不暴露 token、模型或会话明细。" },
+
+      { domain: "K", domainName: "xcmdb 兼容", method: "GET", path: "/api/v3/link/board/list", name: "K-1 设备列表", status: "现有", milestone: "现有", desc: "后端内置接口，仅供 xboard 查询；当前始终返回空设备列表。" },
+      { domain: "K", domainName: "xcmdb 兼容", method: "GET", path: "/api/v3/link/board/count", name: "K-2 设备数量", status: "现有", milestone: "现有", desc: "后端内置接口，仅供 xboard 查询；当前返回 count=0。" },
+      { domain: "K", domainName: "xcmdb 兼容", method: "GET", path: "/api/v3/link/board?resource_id=xxx", name: "K-3 设备详情", status: "现有", milestone: "现有", desc: "后端内置接口，仅供 xboard 按 resource_id 查询；从 SQLite 读取设备详情。" },
+      { domain: "L", domainName: "健康检查", method: "GET", path: "/health", name: "L-1 健康检查", status: "现有", milestone: "现有", desc: "返回 {status: ok}，豁免鉴权。" },
+
+      { domain: "Policy", domainName: "响应/鉴权/版本", method: "POLICY", path: "成功响应", name: "直接返回业务对象", status: "设计约定", milestone: "M1", desc: "成功响应不额外包 data；列表使用 items/total；空内容使用 204。" },
+      { domain: "Policy", domainName: "响应/鉴权/版本", method: "POLICY", path: "错误响应", name: "{error, code, details}", status: "设计约定", milestone: "M1", desc: "保留 error 兼容字段，新增 code 和 details 便于前端处理。" },
+      { domain: "Policy", domainName: "响应/鉴权/版本", method: "POLICY", path: "Authorization: Bearer <token>", name: "Bearer Token 鉴权", status: "目标态", milestone: "M1/M2", desc: "Token 注入 user_id/workspace_id；/health 豁免；WS 用 query token。" },
+      { domain: "Policy", domainName: "响应/鉴权/版本", method: "POLICY", path: "/api/v1 + /api/v3/link/board", name: "API 版本策略", status: "设计约定", milestone: "M1", desc: "主业务使用 /api/v1；xboard 查询用 xcmdb 兼容接口保留 /api/v3，不视为本服务版本。" },
+
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "SelectProjectDir()", name: "选择工程目录", status: "现有桩", milestone: "M1", desc: "弹出原生目录选择框，返回本地工程目录绝对路径。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "GetConfig()", name: "读取本地配置", status: "现有桩", milestone: "M1", desc: "读取客户端本地配置，如 serverURL、token、projectKey、规则包版本。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "SaveConfig(config)", name: "保存本地配置", status: "现有桩", milestone: "M1", desc: "持久化客户端本地配置。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "ListRecentProjects()", name: "最近工程列表", status: "现有桩", milestone: "M1", desc: "返回启动页最近打开的工程卡片数据。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "ListSerialPorts()", name: "枚举串口", status: "现有桩", milestone: "M3", desc: "枚举本机串口和描述信息。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "SendFrame(frameHex)", name: "本地发帧", status: "现有桩", milestone: "M3", desc: "通过本机串口/TCP 下发 hex 帧并返回响应。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "SaveDSL(taskDir, dsl)", name: "保存 DSL", status: "现有桩", milestone: "M1", desc: "把 point_table.json 写入本地任务目录。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "SubmitToServer(server, projectKey, payload)", name: "提交在线点表服务器", status: "现有桩", milestone: "M2", desc: "封装 I-3 快捷提交，返回提交回执号。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "LoadDSL(taskDir)", name: "读取 DSL", status: "新增", milestone: "M1", desc: "从本地任务目录读取 point_table.json。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "ExportXlsx(taskDir, dsl)", name: "导出 Excel", status: "新增", milestone: "M1", desc: "把本地 DSL 转换为兼容平台的 xlsx 工作簿。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "ValidateDSL(dsl)", name: "本地校验", status: "新增", milestone: "M1", desc: "使用本地规则包离线校验 DSL，返回校验错误列表。" },
+      { domain: "Bridge", domainName: "本地 Wails Bridge", method: "BRIDGE", path: "GetRulePackVersion()", name: "本地规则包版本", status: "新增", milestone: "M2", desc: "读取本地规则包 version.json。" }
+    ];
+
+    const scenes = {
+      apiDesign: sharedNodes.apiDesign,
+      overview: {
+        navTitle: "整体拓扑",
+        navHint: "谁在本地，谁在云端",
+        eyebrow: "系统拓扑",
+        title: "整体 C/S 架构",
+        copy: "工程师使用桌面 App；云端后端负责 AI、任务和 xboard 集成；现场设备只接在工程师电脑上，通过 Bridge 和 WSS 被云端间接访问。",
+        notes: ["设备不直连云端", "JSON DSL 在本地权威", "后端负责 AI 与集成"],
+        facts: [
+          "桌面 App 是工程师工作入口，Bridge 是本机能力层。",
+          "云端后端统一承接生成、调试、发布、设备代理和内置 xcmdb 兼容接口。",
+          "xboard 的采集请求经后端代理和 WSS 到本地 Bridge，再到现场设备。",
+          "SQLite 管索引和 CMDB；JobFS 管 run 产物；本地 JSON DSL 管点表正文。"
+        ],
+        storage: [
+          ["客户端本机", "ptw-project.json、point_table.json、xlsx 副本、evidence 副本、debug 日志"],
+          ["服务器 SQLite", "projects、device_tasks、runs、devices、rule_packs、project_usage"],
+          ["服务器 JobFS", "protocol、versions/vN、merged.json、layout.json、evidence.json、debug 产物"]
+        ],
+        groups: [
+          { label: "现场工程师本机", x: 36, y: 52, w: 344, h: 588, color: "local" },
+          { label: "云端统一后端", x: 424, y: 52, w: 448, h: 588, color: "server" },
+          { label: "云端试运行间", x: 914, y: 252, w: 246, h: 172, color: "device" },
+          { label: "外部 AI/OCR", x: 914, y: 52, w: 246, h: 158, color: "external" }
+        ],
+        nodes: {
+          ui: { x: 88, y: 102, w: 238, h: 72 },
+          bridge: { x: 88, y: 222, w: 238, h: 82 },
+          localfs: { x: 88, y: 360, w: 238, h: 96 },
+          device: { x: 88, y: 516, w: 238, h: 74 },
+          api: { x: 504, y: 96, w: 290, h: 76 },
+          pipeline: { x: 504, y: 216, w: 290, h: 88 },
+          tunnel: { x: 504, y: 356, w: 290, h: 76 },
+          sqlite: { x: 472, y: 502, w: 170, h: 84 },
+          jobfs: { x: 664, y: 502, w: 170, h: 84 },
+          mineru: { x: 954, y: 86, w: 166, h: 54 },
+          llm: { x: 954, y: 148, w: 166, h: 54 },
+          xboard: { x: 956, y: 310, w: 164, h: 74 },
+          xcmdb: { x: 664, y: 356, w: 170, h: 76 }
+        },
+        baseEdges: [
+          ["ui", "bridge"],
+          ["bridge", "localfs"],
+          ["bridge", "device"],
+          ["bridge", "api"],
+          ["api", "pipeline"],
+          ["api", "tunnel"],
+          ["pipeline", "jobfs"],
+          ["api", "sqlite"],
+          ["pipeline", "mineru"],
+          ["pipeline", "llm"],
+          ["tunnel", "xboard"],
+          ["tunnel", "bridge"],
+          ["api", "xcmdb"],
+          ["xboard", "xcmdb"]
+        ],
+        steps: [
+          {
+            title: "工程师在本机工作",
+            copy: "UI 调用 Wails Bridge，Bridge 读写本地工程目录，也能访问本地串口/TCP 设备。",
+            tags: ["Wails", "Bridge", "本地工程"],
+            edges: [["ui", "bridge"], ["bridge", "localfs"], ["bridge", "device"]],
+            focus: "bridge"
+          },
+          {
+            title: "协议上传到云端生成",
+            copy: "Bridge 通过 HTTPS 把协议文档提交给后端，后端调用 OCR 和 Agent Pipeline 生成点表草稿。",
+            tags: ["HTTPS", "MinerU", "Agent"],
+            edges: [["bridge", "api"], ["api", "pipeline"], ["pipeline", "mineru"], ["pipeline", "llm"]],
+            focus: "pipeline"
+          },
+          {
+            title: "生成产物先进入 JobFS",
+            copy: "后端把 merged.json、layout.json、evidence.json 和 xlsx 放到 jobs/{run_id}/versions/vN/。",
+            tags: ["run_id", "versions/vN", "evidence"],
+            edges: [["pipeline", "jobfs"], ["api", "sqlite"]],
+            focus: "jobfs"
+          },
+          {
+            title: "客户端领取并落地 DSL",
+            copy: "桌面 App 下载结果并通过 SaveDSL 写回本地工程目录，point_table.json 成为点表权威。",
+            tags: ["GET download", "SaveDSL", "JSON DSL"],
+            edges: [["jobfs", "api"], ["api", "bridge"], ["bridge", "localfs"]],
+            focus: "localfs"
+          },
+          {
+            title: "xboard 通过隧道采集设备",
+            copy: "xboard 请求到后端设备代理，代理经 WSS 转给 Bridge，Bridge 再访问现场设备，响应按原路返回。",
+            tags: ["xboard", "WSS", "串口/TCP"],
+            edges: [["xboard", "tunnel"], ["tunnel", "bridge"], ["bridge", "device"], ["device", "bridge"], ["bridge", "tunnel"], ["tunnel", "xboard"]],
+            focus: "tunnel"
+          }
+        ]
+      },
+
+      bridge: {
+        navTitle: "桌面 Bridge",
+        navHint: "本地能力到底做什么",
+        eyebrow: "本地边界",
+        title: "Bridge 是本地能力适配层",
+        copy: "前端 UI 不直接碰串口、文件系统和长连接；这些能力都由 Wails Go Bridge 承接。它是整个产品从浏览器式 UI 走向现场工具的关键边界。",
+        notes: ["不是云端服务", "运行在工程师电脑", "负责本地设备访问"],
+        facts: [
+          "Bridge 当前在 app.go 中已有方法桩，正式版需要补齐实现。",
+          "Bridge 读写本地工程目录，因此 point_table.json 能真正成为本地权威。",
+          "Bridge 是 xboard 远程采集链路的现场落点，负责把云端转来的帧发给串口/TCP 设备。",
+          "Bridge 还应承担本地配置、最近工程、规则包缓存和调试报文日志。"
+        ],
+        storage: [
+          ["SaveDSL", "把服务器生成结果写入 tasks/{task_id}/point_table.json"],
+          ["SendFrame", "本地调试时向串口/TCP 设备发送 hex 帧并返回响应"],
+          ["SubmitToServer", "人工确认后把本地产物提交给在线点表服务器"]
+        ],
+        groups: [
+          { label: "前端体验层", x: 44, y: 86, w: 270, h: 502, color: "local" },
+          { label: "Wails Go Bridge", x: 408, y: 86, w: 340, h: 502, color: "local" },
+          { label: "本机资源", x: 852, y: 86, w: 300, h: 502, color: "device" }
+        ],
+        nodes: {
+          ui: { x: 86, y: 150, w: 190, h: 82 },
+          bridge: { x: 470, y: 150, w: 218, h: 86 },
+          localfs: { x: 904, y: 128, w: 196, h: 80 },
+          device: { x: 904, y: 300, w: 196, h: 76 },
+          api: { x: 470, y: 382, w: 218, h: 76 },
+          tunnel: { x: 904, y: 430, w: 196, h: 76 }
+        },
+        baseEdges: [
+          ["ui", "bridge"],
+          ["bridge", "localfs"],
+          ["bridge", "device"],
+          ["bridge", "api"],
+          ["api", "tunnel"],
+          ["tunnel", "bridge"]
+        ],
+        steps: [
+          {
+            title: "UI 只发意图",
+            copy: "前端发起选择目录、保存 DSL、发送帧、提交服务器等意图，不自己处理本地系统能力。",
+            tags: ["Wails JS Bindings", "IPC"],
+            edges: [["ui", "bridge"]],
+            focus: "ui"
+          },
+          {
+            title: "Bridge 读写本地工程",
+            copy: "Bridge 把 JSON DSL、xlsx 副本、evidence、debug 日志写入工程目录，保证离线可回看。",
+            tags: ["SaveDSL", "LoadDSL", "工程目录"],
+            edges: [["bridge", "localfs"]],
+            focus: "localfs"
+          },
+          {
+            title: "Bridge 访问现场设备",
+            copy: "本机串口/TCP 只能在工程师电脑上打开，所以 SendFrame 和隧道落点必须在 Bridge。",
+            tags: ["SendFrame", "serial", "tcp"],
+            edges: [["bridge", "device"], ["device", "bridge"]],
+            focus: "device"
+          },
+          {
+            title: "Bridge 与云端同步",
+            copy: "生成、下载、调试和发布仍走云端 API；Bridge 负责把结果落本地，把现场数据回传云端。",
+            tags: ["HTTPS", "Bearer Token", "SubmitToServer"],
+            edges: [["bridge", "api"], ["api", "bridge"]],
+            focus: "api"
+          },
+          {
+            title: "WSS 让 xboard 间接采设备",
+            copy: "xboard 请求经云端代理到 WSS，再到 Bridge；Bridge 对设备发帧并把响应传回代理。",
+            tags: ["WSS", "设备隧道", "xboard proxy"],
+            edges: [["api", "tunnel"], ["tunnel", "bridge"], ["bridge", "device"], ["device", "bridge"]],
+            focus: "tunnel"
+          }
+        ]
+      },
+
+      generate: {
+        navTitle: "生成点表",
+        navHint: "协议如何变成 DSL",
+        eyebrow: "生成链路",
+        title: "协议文档到点表 DSL",
+        copy: "生成链路从本地上传协议开始，经过 OCR、Agent Pipeline、JobFS 版本产物，再由桌面端领取并写入本地 JSON DSL。",
+        notes: ["OCR 先转结构化文本", "Agent 生成点表草稿", "本地 DSL 接管权威"],
+        facts: [
+          "MinerU 负责把 PDF/Word/图片还原为 Markdown、content_list 和 images。",
+          "Agent Pipeline 输出 merged.json、layout.json、evidence.json、xlsx。",
+          "后端 JobFS 是执行环境；生成完成后客户端领取结果。",
+          "本地 point_table.json 是后续编辑、调试和提交的单一权威。"
+        ],
+        storage: [
+          ["协议原文", "本地 protocol/ 保留副本，服务器 jobs/{run_id}/protocol/ 保留执行副本"],
+          ["生成结果", "JobFS versions/v1 保存 merged/layout/evidence/xlsx"],
+          ["最终权威", "Bridge 写入本地 point_table.json"]
+        ],
+        groups: [
+          { label: "本地输入与落地", x: 40, y: 76, w: 315, h: 520, color: "local" },
+          { label: "后端生成流水线", x: 418, y: 76, w: 382, h: 520, color: "server" },
+          { label: "AI/OCR 依赖", x: 878, y: 76, w: 260, h: 520, color: "external" }
+        ],
+        nodes: {
+          ui: { x: 88, y: 126, w: 218, h: 74 },
+          bridge: { x: 88, y: 242, w: 218, h: 76 },
+          localfs: { x: 88, y: 430, w: 218, h: 92 },
+          api: { x: 492, y: 122, w: 234, h: 70 },
+          mineru: { x: 920, y: 122, w: 176, h: 66 },
+          pipeline: { x: 492, y: 258, w: 234, h: 86 },
+          llm: { x: 920, y: 264, w: 176, h: 66 },
+          jobfs: { x: 492, y: 430, w: 234, h: 92 },
+          sqlite: { x: 920, y: 430, w: 176, h: 76 }
+        },
+        baseEdges: [
+          ["ui", "bridge"],
+          ["bridge", "api"],
+          ["api", "mineru"],
+          ["mineru", "pipeline"],
+          ["api", "pipeline"],
+          ["pipeline", "llm"],
+          ["pipeline", "jobfs"],
+          ["api", "sqlite"],
+          ["jobfs", "api"],
+          ["api", "bridge"],
+          ["bridge", "localfs"]
+        ],
+        steps: [
+          {
+            title: "选择工程和协议",
+            copy: "工程师在桌面 UI 选择工程并导入协议文件，系统创建独立协议点表任务，Bridge 负责读取本机文件。",
+            tags: ["工程目录", "协议文件", "Bridge"],
+            edges: [["ui", "bridge"]],
+            focus: "bridge"
+          },
+          {
+            title: "上传并触发 OCR",
+            copy: "协议上传到后端。PDF/Word/图片进入 MinerU，Markdown/txt 可以直接进入 Pipeline。",
+            tags: ["POST generate", "MinerU", "file_parse"],
+            edges: [["bridge", "api"], ["api", "mineru"]],
+            focus: "mineru"
+          },
+          {
+            title: "Agent 生成点表",
+            copy: "Pipeline 调用多类 Agent 识别设备信息、寄存器、功能码、解析函数、单位、命名和证据。",
+            tags: ["AddressAgent", "ParserAgent", "Evidence"],
+            edges: [["mineru", "pipeline"], ["api", "pipeline"], ["pipeline", "llm"]],
+            focus: "pipeline"
+          },
+          {
+            title: "写入 JobFS 和索引",
+            copy: "后端保存 run 状态、版本产物、xlsx 和 evidence；SQLite 记录 run/task/device 的轻量索引。",
+            tags: ["JobFS", "runs", "device_tasks"],
+            edges: [["pipeline", "jobfs"], ["api", "sqlite"]],
+            focus: "jobfs"
+          },
+          {
+            title: "客户端下载并落地",
+            copy: "Bridge 下载 xlsx/evidence/DSL，写入本地工程目录。后续编辑以 point_table.json 为准。",
+            tags: ["download", "SaveDSL", "point_table.json"],
+            edges: [["jobfs", "api"], ["api", "bridge"], ["bridge", "localfs"]],
+            focus: "localfs"
+          }
+        ]
+      },
+
+      debug: {
+        navTitle: "调试闭环",
+        navHint: "xboard 怎么采现场设备",
+        eyebrow: "采集闭环",
+        title: "xboard 到现场设备的远程采集链路",
+        copy: "xboard 在云端，设备在现场。采集请求必须经过后端设备代理和本地 Bridge 才能到物理设备，采集值再回到 AI 调试链路。",
+        notes: ["xboard 不直连设备", "请求帧原路返回", "采集值驱动 AI 修正"],
+        facts: [
+          "xboard 发出的采集请求先进入云端后端的设备隧道代理。",
+          "设备隧道代理通过 WSS 找到工程师电脑上的 Bridge。",
+          "Bridge 对本地串口/TCP 设备发帧，设备响应按原路返回 xboard。",
+          "后端通过 collect/value 或采集结果喂给 Debug Harness 和 AI Triage/Fix。"
+        ],
+        storage: [
+          ["xboard", "缓存采集值，供 /collect/value 查询"],
+          ["JobFS debug", "session、rounds（observation/verdicts/apply_record/converged）"],
+          ["本地 debug", "hex_log、session.json、逐轮自动应用留痕（无人工 apply）"]
+        ],
+        groups: [
+          { label: "现场工程师本机", x: 48, y: 84, w: 320, h: 526, color: "local" },
+          { label: "云端后端", x: 434, y: 84, w: 360, h: 526, color: "server" },
+          { label: "云端试运行间", x: 860, y: 84, w: 292, h: 526, color: "device" }
+        ],
+        nodes: {
+          ui: { x: 94, y: 128, w: 222, h: 66 },
+          bridge: { x: 94, y: 284, w: 222, h: 76 },
+          device: { x: 94, y: 452, w: 222, h: 74 },
+          api: { x: 504, y: 126, w: 222, h: 66 },
+          tunnel: { x: 504, y: 258, w: 222, h: 74 },
+          pipeline: { x: 504, y: 396, w: 222, h: 82 },
+          xboard: { x: 916, y: 238, w: 178, h: 76 },
+          jobfs: {
+            x: 504,
+            y: 508,
+            w: 222,
+            h: 76,
+            label: "JobFS debug\nsamples / changeset",
+            type: "服务器调试产物",
+            detail: "后端保存调试会话、xboard 采样、AI triage/fix 和 apply 记录，用于追溯每次修正。",
+            fields: {
+              "路径": "jobs/{run_id}/debug/{debug_id}/",
+              "文件": "samples_roundN、triage_roundN、changeset",
+              "归属": "服务器 JobFS 临时态"
+            }
+          },
+          localfs: {
+            x: 94,
+            y: 472,
+            w: 222,
+            h: 74,
+            label: "本地 debug 日志\nhex_log / rounds",
+            type: "本地调试记录",
+            detail: "Bridge 在本地保存调试报文与自收敛 loop 逐轮自动应用留痕（无人工 apply），方便现场复盘。",
+            fields: {
+              "典型文件": "hex_log.json、session.json、rounds/{n}/apply_record.json",
+              "归属": "工程师本机工程目录",
+              "用途": "现场追溯和离线复核"
+            }
+          }
+        },
+        baseEdges: [
+          ["ui", "api"],
+          ["api", "xboard"],
+          ["xboard", "tunnel"],
+          ["tunnel", "bridge"],
+          ["bridge", "device"],
+          ["device", "bridge"],
+          ["bridge", "tunnel"],
+          ["tunnel", "xboard"],
+          ["xboard", "pipeline"],
+          ["pipeline", "jobfs"],
+          ["pipeline", "ui"],
+          ["ui", "localfs"]
+        ],
+        steps: [
+          {
+            title: "启动调试 Job",
+            copy: "工程师从 UI 发起 debug，后端把当前点表部署到 xboard 并创建调试会话。",
+            tags: ["POST debug", "deploy", "session"],
+            edges: [["ui", "api"], ["api", "xboard"]],
+            focus: "api"
+          },
+          {
+            title: "xboard 产生采集请求",
+            copy: "xboard 按点表生成请求帧，但它不能直接碰现场设备，所以请求先进入后端隧道代理。",
+            tags: ["采集请求", "xboard", "代理"],
+            edges: [["xboard", "tunnel"]],
+            focus: "xboard"
+          },
+          {
+            title: "请求帧到达本地 Bridge",
+            copy: "后端通过 WSS 把请求帧转发到工程师电脑上的 Bridge，Bridge 找到对应串口/TCP 链路。",
+            tags: ["WSS", "Bridge", "帧透传"],
+            edges: [["tunnel", "bridge"], ["bridge", "device"]],
+            focus: "bridge"
+          },
+          {
+            title: "设备响应原路返回",
+            copy: "物理设备返回响应帧，Bridge 回传给云端代理，代理再回给 xboard。",
+            tags: ["响应帧", "原路返回", "collect"],
+            edges: [["device", "bridge"], ["bridge", "tunnel"], ["tunnel", "xboard"]],
+            focus: "device"
+          },
+          {
+            title: "AI 调试生成修正建议",
+            copy: "后端读取 xboard 采集值，Debug Harness 判断异常点，生成 changeset，工程师确认后 apply 成新版本。",
+            tags: ["collect/value", "changeset", "apply"],
+            edges: [["xboard", "pipeline"], ["pipeline", "jobfs"], ["pipeline", "ui"], ["ui", "localfs"]],
+            focus: "pipeline"
+          }
+        ]
+      },
+
+      data: {
+        navTitle: "数据与数据库",
+        navHint: "三层存储怎么分工",
+        eyebrow: "数据模型",
+        title: "本地 DSL + SQLite + JobFS",
+        copy: "整个系统的数据库设计不是把点表正文都塞进 SQL，而是把权威点表、本地工程、服务器索引和任务产物分层管理。",
+        notes: ["本地 DSL 是权威", "SQLite 存索引", "JobFS 存过程产物"],
+        facts: [
+          "point_table.json 是点表正文的权威，便于离线编辑、版本快照和现场交付。",
+          "SQLite 的职责是项目隔离、协议点表任务、run 索引、CMDB、规则包和工程用量汇总。",
+          "JobFS 保存生成和调试过程产物，支持版本目录和 evidence 追溯。",
+          "当前代码只有 devices/resource_seq，目标表还需要通过迁移逐步补齐。"
+        ],
+        storage: [
+          ["客户端本机", "权威：ptw-project.json、point_table.json；副本：xlsx、evidence"],
+          ["服务器 SQLite", "权威：projects、device_tasks、runs、devices、rule_packs、project_usage"],
+          ["服务器 JobFS", "临时态：status、protocol、versions、debug artifacts"]
+        ],
+        groups: [
+          { label: "客户端本机权威", x: 52, y: 88, w: 300, h: 500, color: "local" },
+          { label: "服务器 SQLite 持久化", x: 450, y: 88, w: 300, h: 500, color: "store" },
+          { label: "服务器 JobFS 执行态", x: 850, y: 88, w: 300, h: 500, color: "job" }
+        ],
+        nodes: {
+          localfs: {
+            x: 96,
+            y: 134,
+            w: 212,
+            h: 86,
+            label: "ptw-project.json\n工程元数据",
+            type: "本地工程元数据",
+            detail: "记录工程名称、客户、工程目录、服务器地址、project_key、任务清单和规则包版本。",
+            fields: {
+              "权威位置": "客户端本机",
+              "作用": "组织一个工程下的多个协议点表任务",
+              "生命周期": "随工程目录长期存在"
+            }
+          },
+          ui: {
+            x: 96,
+            y: 258,
+            w: 212,
+            h: 92,
+            label: "point_table.json\n点表正文权威",
+            type: "JSON DSL",
+            detail: "点表正文的单一权威，包含设备信息、读点、写点、命令、澄清项和变更集。",
+            fields: {
+              "权威位置": "客户端本机",
+              "替代对象": "不要把 Excel 当作唯一真相",
+              "导出关系": "point_table.xlsx 是副本"
+            }
+          },
+          bridge: {
+            x: 96,
+            y: 404,
+            w: 212,
+            h: 86,
+            label: "debug / sessions\n本地会话快照",
+            type: "本地会话归档",
+            detail: "保存现场调试、报文日志、历史版本快照和人工确认记录，便于复盘和离线交付。",
+            fields: {
+              "目录": "debug/、sessions/、clarifications/",
+              "内容": "hex_log、changeset、apply_record",
+              "边界": "本地归档，不是服务器索引"
+            }
+          },
+          sqlite: {
+            x: 494,
+            y: 128,
+            w: 212,
+            h: 92,
+            label: "projects\nproject_id / token",
+            type: "SQLite 目标表",
+            detail: "项目表用于多工程隔离和 Token 绑定，是后续多工程师协作的基础。",
+            fields: {
+              "主键": "project_id",
+              "隔离": "Token -> project_id",
+              "状态": "目标态新增"
+            }
+          },
+          api: {
+            x: 494,
+            y: 258,
+            w: 212,
+            h: 92,
+            label: "device_tasks + runs\n协议任务状态 / run 索引",
+            type: "SQLite 目标表",
+            detail: "协议点表任务表驱动前端任务面板；runs 表替代扫描 jobfs 的方式，快速定位生成和调试记录。",
+            fields: {
+              "device_tasks": "协议点表任务状态、read/write/error 统计",
+              "runs": "run_id、status、version、point totals",
+              "价值": "让查询从文件扫描变成 SQL 索引"
+            }
+          },
+          xcmdb: {
+            x: 494,
+            y: 410,
+            w: 212,
+            h: 92,
+            label: "devices + project_usage\nCMDB / 工程用量",
+            type: "SQLite 表",
+            detail: "devices 是当前已有 CMDB 表；project_usage 是面向工程总览的工程级用量汇总表。",
+            fields: {
+              "当前已有": "devices、resource_seq",
+              "待补字段": "project_id、canonical_version",
+              "工程用量": "amount_cny、generated_tasks、debug_sessions"
+            }
+          },
+          jobfs: {
+            x: 894,
+            y: 128,
+            w: 212,
+            h: 92,
+            label: "status.json + protocol\n任务状态 / 协议副本",
+            type: "JobFS 文件",
+            detail: "每个 run 保存自己的状态文件和协议副本，是流水线执行时的上下文。",
+            fields: {
+              "路径": "jobs/{run_id}/",
+              "文件": "status.json、protocol/",
+              "清理": "按状态和领取情况做 TTL"
+            }
+          },
+          pipeline: {
+            x: 894,
+            y: 258,
+            w: 212,
+            h: 92,
+            label: "versions/vN\nmerged / layout / xlsx",
+            type: "JobFS 版本产物",
+            detail: "生成和 apply 后的版本目录，保存 merged、layout、device_info、evidence 和 Excel。",
+            fields: {
+              "目录": "versions/v1、versions/v2",
+              "canonical": "由 canonical 文件指向当前版本",
+              "边界": "服务器执行产物，不是最终权威"
+            }
+          },
+          tunnel: {
+            x: 894,
+            y: 410,
+            w: 212,
+            h: 92,
+            label: "debug/{debug_id}\nsamples / changeset",
+            type: "JobFS 调试产物",
+            detail: "保存调试会话、采样值、AI 判定、修正建议和 apply 记录。",
+            fields: {
+              "目录": "debug/{debug_id}/",
+              "文件": "samples、triage、changeset、apply_record",
+              "用途": "支撑 AI 调试和可追溯 apply"
+            }
+          }
+        },
+        baseEdges: [
+          ["sqlite", "api"],
+          ["api", "xcmdb"],
+          ["jobfs", "pipeline"],
+          ["pipeline", "tunnel"],
+          ["pipeline", "ui"],
+          ["api", "pipeline"],
+          ["ui", "bridge"],
+          ["localfs", "ui"]
+        ],
+        steps: [
+          {
+            title: "本地工程是用户资产",
+            copy: "工程目录记录项目元数据和任务清单，跟随工程师电脑存在，可复制、归档和离线查看。",
+            tags: ["ptw-project.json", "工程目录"],
+            edges: [["localfs", "ui"]],
+            focus: "localfs"
+          },
+          {
+            title: "点表正文不进 SQL",
+            copy: "点表正文以 point_table.json 存在，包含读点、写点、命令、证据引用、调试建议和变更集。",
+            tags: ["JSON DSL", "权威", "离线"],
+            edges: [["pipeline", "ui"], ["ui", "bridge"]],
+            focus: "ui"
+          },
+          {
+            title: "SQLite 管索引和状态",
+            copy: "服务器数据库让后端能按 project、task、run、resource_id 查询状态，不再扫描整个 jobfs。",
+            tags: ["projects", "runs", "devices"],
+            edges: [["sqlite", "api"], ["api", "xcmdb"]],
+            focus: "api"
+          },
+          {
+            title: "JobFS 管过程产物",
+            copy: "每个 run 有 status、protocol、versions 和 debug 目录，用于生成、证据追溯和 apply 新版本。",
+            tags: ["versions/vN", "evidence", "debug"],
+            edges: [["jobfs", "pipeline"], ["pipeline", "tunnel"]],
+            focus: "pipeline"
+          },
+          {
+            title: "版本指针需要同步",
+            copy: "apply 产生 v2 后，要更新 canonical 和 devices.xlsx_path，避免 xboard 继续加载旧版本 xlsx。",
+            tags: ["canonical", "xlsx_path", "迁移"],
+            edges: [["tunnel", "pipeline"], ["pipeline", "api"], ["api", "xcmdb"]],
+            focus: "xcmdb"
+          }
+        ]
+      },
+
+      roadmap: {
+        navTitle: "落地演进",
+        navHint: "现在、目标和优先级",
+        eyebrow: "实施路线",
+        title: "从当前实现到目标产品",
+        copy: "现有代码已经有后端生成、调试、JobFS、SQLite CMDB 和桌面 Bridge 桩。目标是补齐本地 DSL、工程隔离、OCR、澄清、设备隧道和安全审计。",
+        notes: ["M1 打通产物闭环", "M2 补工程/鉴权/OCR", "M3 完成远程调试"],
+        facts: [
+          "M1 重点是生成结果下载、本地 SaveDSL、canonical xlsx_path 修复和容器化。",
+          "M2 重点是 MinerU OCR、工程/任务表、Token 鉴权、澄清队列和进度推送。",
+          "M3 重点是设备隧道代理、Harness 调试、规则包分发和多工程师协作。",
+          "不要把目标态和现状混在一起：文档描述 To-Be，代码还在逐步补齐。"
+        ],
+        storage: [
+          ["当前已有", "Gin API、Pipeline、Debug、JobFS、SQLite devices、Wails 桩"],
+          ["近期优先", "SaveDSL、DSL endpoint、MinerU package、migrations、runs 表"],
+          ["后续增强", "WSS tunnel、Harness、Token 鉴权、rule_packs、project_usage"]
+        ],
+        groups: [
+          { label: "当前现状", x: 54, y: 104, w: 298, h: 448, color: "server" },
+          { label: "M1 生产可用", x: 452, y: 104, w: 298, h: 448, color: "local" },
+          { label: "M2/M3 完整闭环", x: 850, y: 104, w: 298, h: 448, color: "device" }
+        ],
+        nodes: {
+          api: {
+            x: 96,
+            y: 152,
+            w: 214,
+            h: 80,
+            label: "现有后端\n23 个 API",
+            type: "当前实现",
+            detail: "Go/Gin 后端已经具备生成、下载、证据、调试、版本和 xcmdb 兼容接口。",
+            fields: {
+              "状态": "As-Is",
+              "价值": "支撑当前生成和调试主链路",
+              "缺口": "缺工程、鉴权、OCR、澄清、SSE/WSS"
+            }
+          },
+          jobfs: {
+            x: 96,
+            y: 286,
+            w: 214,
+            h: 80,
+            label: "现有 JobFS\nrun 产物",
+            type: "当前实现",
+            detail: "当前服务器已经用 JobFS 保存 run 状态、版本产物和调试目录。",
+            fields: {
+              "状态": "As-Is",
+              "路径": "jobs/{run_id}/",
+              "风险": "查询依赖扫描，缺 runs 表索引"
+            }
+          },
+          sqlite: {
+            x: 96,
+            y: 418,
+            w: 214,
+            h: 80,
+            label: "现有 SQLite\ndevices/resource_seq",
+            type: "当前实现",
+            detail: "当前 SQLite 只有基础 CMDB 设备表和 resource_id 序列表。",
+            fields: {
+              "状态": "As-Is",
+              "表": "devices、resource_seq",
+              "缺口": "project_id、runs、device_tasks、project_usage"
+            }
+          },
+          bridge: {
+            x: 494,
+            y: 152,
+            w: 214,
+            h: 80,
+            label: "实现 SaveDSL\n本地工程落地",
+            type: "M1 任务",
+            detail: "补齐 Bridge 的本地文件写入能力，让生成结果能真正进入工程师电脑。",
+            fields: {
+              "方法": "SaveDSL、LoadDSL、ExportXlsx",
+              "输入": "服务器下载的 DSL/xlsx/evidence",
+              "输出": "本地工程目录文件"
+            }
+          },
+          localfs: {
+            x: 494,
+            y: 286,
+            w: 214,
+            h: 80,
+            label: "固化 JSON DSL\npoint_table.json 权威",
+            type: "M1 任务",
+            detail: "定义并固化 DSL schema，把点表正文从服务器内部 MergedPoint 转换成本地权威结构。",
+            fields: {
+              "文件": "point_table.json",
+              "schema": "PointTableDSL",
+              "原则": "Excel 是副本，不是权威"
+            }
+          },
+          xcmdb: {
+            x: 494,
+            y: 418,
+            w: 214,
+            h: 80,
+            label: "修复 canonical\n同步 xlsx_path",
+            type: "M1 修复",
+            detail: "apply 产生新版本后，需要同步 canonical_version 和 devices.xlsx_path，避免 xboard 加载旧点表。",
+            fields: {
+              "问题": "xlsx_path 可能仍指向 v1",
+              "修复": "Apply 后更新 SQLite",
+              "影响": "xboard 部署路径"
+            }
+          },
+          mineru: {
+            x: 892,
+            y: 144,
+            w: 214,
+            h: 72,
+            label: "MinerU OCR\nPDF/图片输入",
+            type: "M2 任务",
+            detail: "把 PDF、Word、图片协议纳入后端 OCR 流水线，扩大协议输入范围。",
+            fields: {
+              "API": "http://192.168.20.99:8001",
+              "包边界": "internal/mineru/",
+              "结果": "Markdown、content_list、images"
+            }
+          },
+          tunnel: {
+            x: 892,
+            y: 258,
+            w: 214,
+            h: 82,
+            label: "设备隧道代理\nxboard->Bridge",
+            type: "M3 任务",
+            detail: "实现 xboard 采集请求到本地 Bridge 的 WSS 透传，让云端试运行间能采现场设备。",
+            fields: {
+              "链路": "xboard -> 后端 -> WSS -> Bridge -> 设备",
+              "价值": "真实采集闭环",
+              "风险": "连接保活、权限、现场网络"
+            }
+          },
+          pipeline: {
+            x: 892,
+            y: 398,
+            w: 214,
+            h: 90,
+            label: "澄清 / Harness\n鉴权 / 工程用量",
+            type: "M2/M3 任务",
+            detail: "补齐澄清队列、调试 Harness、Token 鉴权、规则包和工程用量汇总。",
+            fields: {
+              "交互": "clarifications、decisions、apply",
+              "安全": "Bearer Token + project_id",
+              "审计": "project_usage、写点日志"
+            }
+          }
+        },
+        baseEdges: [
+          ["api", "bridge"],
+          ["jobfs", "localfs"],
+          ["sqlite", "xcmdb"],
+          ["bridge", "mineru"],
+          ["localfs", "tunnel"],
+          ["xcmdb", "pipeline"]
+        ],
+        steps: [
+          {
+            title: "现状能生成和调试",
+            copy: "后端已有生成 Pipeline、JobFS、调试编排、xlsx 写出和基础 CMDB。",
+            tags: ["As-Is", "Gin", "JobFS"],
+            edges: [["api", "jobfs"], ["jobfs", "sqlite"]],
+            focus: "api"
+          },
+          {
+            title: "M1 先打通本地权威",
+            copy: "生成完成后让客户端领取 DSL/xlsx/evidence，并通过 Bridge 写到本地工程目录。",
+            tags: ["SaveDSL", "DSL", "download"],
+            edges: [["api", "bridge"], ["jobfs", "localfs"]],
+            focus: "bridge"
+          },
+          {
+            title: "修正版本指针",
+            copy: "apply 之后同步 canonical_version 和 xlsx_path，确保 xboard 看到的是最新点表。",
+            tags: ["canonical", "xlsx_path", "v2"],
+            edges: [["sqlite", "xcmdb"]],
+            focus: "xcmdb"
+          },
+          {
+            title: "M2 补输入和协作",
+            copy: "接入 MinerU、工程/任务表、runs 表、Token 鉴权、澄清队列和进度推送。",
+            tags: ["MinerU", "projects", "Token"],
+            edges: [["bridge", "mineru"], ["localfs", "tunnel"]],
+            focus: "mineru"
+          },
+          {
+            title: "M3 补完整调试闭环",
+            copy: "设备隧道代理和 Harness 完成后，xboard 采集、AI 判定、自收敛 loop 自动应用收敛、发布就形成闭环。",
+            tags: ["WSS tunnel", "Harness", "publish"],
+            edges: [["tunnel", "pipeline"], ["pipeline", "xcmdb"]],
+            focus: "tunnel"
+          }
+        ]
+      }
+    };
+
+    const canvas = document.getElementById("mapCanvas");
+    const ctx = canvas.getContext("2d");
+    const navEl = document.getElementById("sceneNav");
+    const timelineEl = document.getElementById("timeline");
+    const noteEl = document.getElementById("canvasNote");
+    const sceneTitleEl = document.getElementById("sceneTitle");
+    const sceneCopyEl = document.getElementById("sceneCopy");
+    const eyebrowEl = document.getElementById("eyebrow");
+    const stepIndexEl = document.getElementById("stepIndex");
+    const stepTitleEl = document.getElementById("stepTitle");
+    const stepCopyEl = document.getElementById("stepCopy");
+    const stepTagsEl = document.getElementById("stepTags");
+    const nodeTitleEl = document.getElementById("nodeTitle");
+    const nodeTypeEl = document.getElementById("nodeType");
+    const nodeCopyEl = document.getElementById("nodeCopy");
+    const nodeKVEl = document.getElementById("nodeKV");
+    const factsEl = document.getElementById("facts");
+    const storageTableEl = document.getElementById("storageTable");
+    const apiSearchEl = document.getElementById("apiSearch");
+    const apiDomainTabsEl = document.getElementById("apiDomainTabs");
+    const apiListEl = document.getElementById("apiList");
+    const apiCountEl = document.getElementById("apiCount");
+    const playBtn = document.getElementById("playBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const speedRange = document.getElementById("speedRange");
+
+    let sceneKey = "overview";
+    let stepIndex = 0;
+    let selectedNode = null;
+    let hoverNode = null;
+    let playing = true;
+    let speed = 1;
+    let activeApiDomain = "all";
+    let apiSearch = "";
+    let lastFrame = performance.now();
+    let stepElapsed = 0;
+    const stepDuration = 5600;
+
+    const view = { w: 1200, h: 680, scale: 1, offsetX: 0, offsetY: 0 };
+
+    function nodeInfo(scene, id) {
+      const base = sharedNodes[id] || {
+        id,
+        label: id,
+        type: "节点",
+        color: "neutral",
+        detail: "该节点用于表达当前视图中的系统角色。",
+        fields: {}
+      };
+      const override = scene.nodes[id] || {};
+      return { ...base, ...override, id, label: override.label || base.label };
+    }
+
+    function initNav() {
+      navEl.innerHTML = "";
+      Object.entries(scenes).forEach(([key, scene]) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.scene = key;
+        btn.innerHTML = `<strong>${scene.navTitle}</strong><span>${scene.navHint}</span>`;
+        btn.addEventListener("click", () => setScene(key));
+        navEl.appendChild(btn);
+      });
+    }
+
+    function setScene(key) {
+      sceneKey = key;
+      stepIndex = 0;
+      stepElapsed = 0;
+      const scene = scenes[sceneKey];
+      selectedNode = scene.steps[0].focus;
+      if (scene.steps[0].apiDomain) {
+        activeApiDomain = scene.steps[0].apiDomain;
+      } else if (sceneKey !== "apiDesign") {
+        activeApiDomain = "all";
+      }
+      renderStatic();
+    }
+
+    function setStep(index) {
+      const scene = scenes[sceneKey];
+      stepIndex = (index + scene.steps.length) % scene.steps.length;
+      stepElapsed = 0;
+      selectedNode = scene.steps[stepIndex].focus || selectedNode;
+      if (scene.steps[stepIndex].apiDomain) {
+        activeApiDomain = scene.steps[stepIndex].apiDomain;
+      }
+      renderStatic();
+    }
+
+    function renderStatic() {
+      const scene = scenes[sceneKey];
+      document.querySelectorAll(".nav button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.scene === sceneKey);
+      });
+
+      eyebrowEl.textContent = scene.eyebrow;
+      sceneTitleEl.textContent = scene.title;
+      sceneCopyEl.textContent = scene.copy;
+
+      noteEl.innerHTML = "";
+      scene.notes.forEach(note => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = note;
+        noteEl.appendChild(chip);
+      });
+
+      timelineEl.innerHTML = "";
+      scene.steps.forEach((step, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = index === stepIndex ? "active" : "";
+        btn.innerHTML = `<span class="step-no">${index + 1}</span><strong>${step.title}</strong><span>${step.tags.slice(0, 2).join(" / ")}</span>`;
+        btn.addEventListener("click", () => setStep(index));
+        timelineEl.appendChild(btn);
+      });
+
+      const step = scene.steps[stepIndex];
+      stepIndexEl.textContent = `${stepIndex + 1} / ${scene.steps.length}`;
+      stepTitleEl.textContent = step.title;
+      stepCopyEl.textContent = step.copy;
+      stepTagsEl.innerHTML = "";
+      step.tags.forEach(tag => {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = tag;
+        stepTagsEl.appendChild(pill);
+      });
+
+      factsEl.innerHTML = "";
+      scene.facts.forEach(fact => {
+        const li = document.createElement("li");
+        li.textContent = fact;
+        factsEl.appendChild(li);
+      });
+
+      storageTableEl.innerHTML = "";
+      scene.storage.forEach(([k, v]) => {
+        const row = document.createElement("div");
+        row.className = "mini-row";
+        row.innerHTML = `<b>${k}</b><span>${v}</span>`;
+        storageTableEl.appendChild(row);
+      });
+
+      renderNodeDetail();
+      renderApiPanel();
+    }
+
+    function renderNodeDetail() {
+      const scene = scenes[sceneKey];
+      const id = selectedNode || scene.steps[stepIndex].focus || Object.keys(scene.nodes)[0];
+      const info = nodeInfo(scene, id);
+      nodeTitleEl.textContent = info.label.replace(/\n/g, " / ");
+      nodeTypeEl.textContent = info.type;
+      nodeCopyEl.textContent = info.detail;
+      nodeKVEl.innerHTML = "";
+      Object.entries(info.fields || {}).forEach(([k, v]) => {
+        const row = document.createElement("div");
+        row.className = "kv-row";
+        row.innerHTML = `<b>${k}</b><span>${v}</span>`;
+        nodeKVEl.appendChild(row);
+      });
+    }
+
+    function apiDomains() {
+      const map = new Map();
+      apiCatalog.forEach(item => {
+        if (!map.has(item.domain)) {
+          map.set(item.domain, item.domainName);
+        }
+      });
+      return Array.from(map.entries());
+    }
+
+    function methodClass(method) {
+      const m = String(method).toLowerCase();
+      if (m === "get") return "get";
+      if (m === "post") return "post";
+      if (m === "ws") return "ws";
+      if (m === "sse") return "sse";
+      if (m === "bridge") return "bridge";
+      if (m === "policy") return "policy";
+      if (m === "external") return "external";
+      return "";
+    }
+
+    function renderApiPanel() {
+      const q = apiSearch.trim().toLowerCase();
+      const domainFilter = activeApiDomain || "all";
+      const filtered = apiCatalog.filter(item => {
+        const domainOK = domainFilter === "all" || item.domain === domainFilter;
+        const text = `${item.domain} ${item.domainName} ${item.method} ${item.path} ${item.name} ${item.status} ${item.milestone} ${item.desc}`.toLowerCase();
+        return domainOK && (!q || text.includes(q));
+      });
+
+      apiCountEl.textContent = `${filtered.length} / ${apiCatalog.length}`;
+
+      apiDomainTabsEl.innerHTML = "";
+      const allBtn = document.createElement("button");
+      allBtn.type = "button";
+      allBtn.textContent = "全部";
+      allBtn.className = domainFilter === "all" ? "active" : "";
+      allBtn.addEventListener("click", () => {
+        activeApiDomain = "all";
+        renderApiPanel();
+      });
+      apiDomainTabsEl.appendChild(allBtn);
+
+      apiDomains().forEach(([domain, label]) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = `${domain} ${label}`;
+        btn.className = domainFilter === domain ? "active" : "";
+        btn.addEventListener("click", () => {
+          activeApiDomain = domain;
+          renderApiPanel();
+        });
+        apiDomainTabsEl.appendChild(btn);
+      });
+
+      apiListEl.innerHTML = "";
+      filtered.forEach(item => {
+        const row = document.createElement("article");
+        row.className = "api-item";
+        row.innerHTML = `
+          <div class="api-row">
+            <span class="method ${methodClass(item.method)}">${item.method}</span>
+            <span class="endpoint">${item.path}</span>
+          </div>
+          <div class="api-name">${item.name}</div>
+          <div class="api-desc">${item.desc}</div>
+          <div class="api-meta">
+            <span>${item.domain} ${item.domainName}</span>
+            <span>${item.status}</span>
+            <span>${item.milestone}</span>
+          </div>
+        `;
+        apiListEl.appendChild(row);
+      });
+
+      if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "api-item";
+        empty.innerHTML = `<div class="api-desc">没有匹配的 API。调整搜索词或切换到“全部”。</div>`;
+        apiListEl.appendChild(empty);
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const scale = Math.min(rect.width / view.w, rect.height / view.h);
+      view.scale = scale;
+      view.offsetX = (rect.width - view.w * scale) / 2;
+      view.offsetY = (rect.height - view.h * scale) / 2;
+    }
+
+    function logicalToCanvas(p) {
+      return {
+        x: view.offsetX + p.x * view.scale,
+        y: view.offsetY + p.y * view.scale
+      };
+    }
+
+    function canvasToLogical(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - view.offsetX) / view.scale,
+        y: (clientY - rect.top - view.offsetY) / view.scale
+      };
+    }
+
+    function roundedRectPath(c, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      c.beginPath();
+      c.moveTo(x + rr, y);
+      c.arcTo(x + w, y, x + w, y + h, rr);
+      c.arcTo(x + w, y + h, x, y + h, rr);
+      c.arcTo(x, y + h, x, y, rr);
+      c.arcTo(x, y, x + w, y, rr);
+      c.closePath();
+    }
+
+    function wrapLines(c, text, maxWidth) {
+      const raw = String(text).split("\n");
+      const lines = [];
+      raw.forEach(part => {
+        let current = "";
+        const chars = Array.from(part);
+        chars.forEach(ch => {
+          const test = current + ch;
+          if (c.measureText(test).width > maxWidth && current) {
+            lines.push(current);
+            current = ch;
+          } else {
+            current = test;
+          }
+        });
+        if (current) lines.push(current);
+      });
+      return lines;
+    }
+
+    function nodeCenter(node) {
+      return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
+    }
+
+    function edgePoints(scene, from, to) {
+      const a = scene.nodes[from];
+      const b = scene.nodes[to];
+      if (!a || !b) return null;
+      const ca = nodeCenter(a);
+      const cb = nodeCenter(b);
+      const dx = cb.x - ca.x;
+      const dy = cb.y - ca.y;
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      let start = { ...ca };
+      let end = { ...cb };
+      if (ax > ay) {
+        start.x += Math.sign(dx) * a.w / 2;
+        end.x -= Math.sign(dx) * b.w / 2;
+      } else {
+        start.y += Math.sign(dy) * a.h / 2;
+        end.y -= Math.sign(dy) * b.h / 2;
+      }
+      return { start, end, dx, dy };
+    }
+
+    function drawArrow(c, start, end, color, width, active) {
+      const p1 = logicalToCanvas(start);
+      const p2 = logicalToCanvas(end);
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const bend = Math.min(56, len * 0.14) * (active ? 1 : 0.55);
+      const cx = (p1.x + p2.x) / 2 + nx * bend;
+      const cy = (p1.y + p2.y) / 2 + ny * bend;
+
+      c.save();
+      c.strokeStyle = color;
+      c.lineWidth = width;
+      c.globalAlpha = active ? 0.92 : 0.35;
+      c.beginPath();
+      c.moveTo(p1.x, p1.y);
+      c.quadraticCurveTo(cx, cy, p2.x, p2.y);
+      c.stroke();
+
+      const t = 0.92;
+      const qx = (1 - t) * (1 - t) * p1.x + 2 * (1 - t) * t * cx + t * t * p2.x;
+      const qy = (1 - t) * (1 - t) * p1.y + 2 * (1 - t) * t * cy + t * t * p2.y;
+      const tx = 2 * (1 - t) * (cx - p1.x) + 2 * t * (p2.x - cx);
+      const ty = 2 * (1 - t) * (cy - p1.y) + 2 * t * (p2.y - cy);
+      const angle = Math.atan2(ty, tx);
+      const size = active ? 9 : 7;
+      c.beginPath();
+      c.moveTo(qx, qy);
+      c.lineTo(qx - Math.cos(angle - Math.PI / 6) * size, qy - Math.sin(angle - Math.PI / 6) * size);
+      c.lineTo(qx - Math.cos(angle + Math.PI / 6) * size, qy - Math.sin(angle + Math.PI / 6) * size);
+      c.closePath();
+      c.fillStyle = color;
+      c.fill();
+      c.restore();
+
+      return { p1, p2, cx, cy };
+    }
+
+    function pointOnQuad(p1, c, p2, t) {
+      return {
+        x: (1 - t) * (1 - t) * p1.x + 2 * (1 - t) * t * c.x + t * t * p2.x,
+        y: (1 - t) * (1 - t) * p1.y + 2 * (1 - t) * t * c.y + t * t * p2.y
+      };
+    }
+
+    function drawPacket(c, curve, t, color, label) {
+      const p = pointOnQuad(curve.p1, { x: curve.cx, y: curve.cy }, curve.p2, t);
+      c.save();
+      c.shadowColor = "rgba(15, 23, 42, 0.2)";
+      c.shadowBlur = 10;
+      c.fillStyle = color;
+      c.beginPath();
+      c.arc(p.x, p.y, 7, 0, Math.PI * 2);
+      c.fill();
+      c.shadowBlur = 0;
+      c.fillStyle = "#ffffff";
+      c.beginPath();
+      c.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+      c.fill();
+      if (label) {
+        c.font = "11px ui-sans-serif, system-ui, sans-serif";
+        const tw = c.measureText(label).width;
+        roundedRectPath(c, p.x + 10, p.y - 15, tw + 14, 24, 6);
+        c.fillStyle = "rgba(255, 255, 255, 0.94)";
+        c.fill();
+        c.strokeStyle = "rgba(148, 163, 184, 0.55)";
+        c.stroke();
+        c.fillStyle = "#334155";
+        c.fillText(label, p.x + 17, p.y + 1);
+      }
+      c.restore();
+    }
+
+    function drawGroup(c, group) {
+      const p = logicalToCanvas(group);
+      const w = group.w * view.scale;
+      const h = group.h * view.scale;
+      const color = palette[group.color] || palette.neutral;
+      c.save();
+      roundedRectPath(c, p.x, p.y, w, h, 14);
+      c.fillStyle = color + "0d";
+      c.fill();
+      c.strokeStyle = color + "55";
+      c.lineWidth = 1;
+      c.stroke();
+      c.font = "700 13px ui-sans-serif, system-ui, sans-serif";
+      c.fillStyle = color;
+      c.fillText(group.label, p.x + 14, p.y + 24);
+      c.restore();
+    }
+
+    function drawNode(c, scene, id, activeSet) {
+      const n = scene.nodes[id];
+      const info = nodeInfo(scene, id);
+      const p = logicalToCanvas(n);
+      const w = n.w * view.scale;
+      const h = n.h * view.scale;
+      const color = palette[info.color] || palette.neutral;
+      const isActive = activeSet.has(id);
+      const isSelected = selectedNode === id;
+      const isHover = hoverNode === id;
+
+      c.save();
+      roundedRectPath(c, p.x, p.y, w, h, 10);
+      c.fillStyle = "#ffffff";
+      c.fill();
+      c.shadowColor = isActive || isSelected ? color + "44" : "rgba(15, 23, 42, 0.08)";
+      c.shadowBlur = isActive || isSelected ? 18 : 8;
+      c.strokeStyle = isSelected ? color : (isActive ? color : "#cfd8e5");
+      c.lineWidth = isSelected ? 3 : (isActive ? 2 : 1);
+      c.stroke();
+      c.shadowBlur = 0;
+
+      c.fillStyle = color;
+      c.beginPath();
+      c.roundRect ? c.roundRect(p.x, p.y, 6, h, 8) : roundedRectPath(c, p.x, p.y, 6, h, 3);
+      c.fill();
+
+      c.font = `760 ${Math.max(11, 14 * view.scale)}px ui-sans-serif, system-ui, sans-serif`;
+      c.fillStyle = "#0f172a";
+      c.textBaseline = "middle";
+      const maxWidth = w - 28;
+      const lines = wrapLines(c, info.label, maxWidth).slice(0, 3);
+      const lineHeight = Math.max(15, 18 * view.scale);
+      const total = lineHeight * lines.length;
+      let y = p.y + h / 2 - total / 2 + lineHeight / 2;
+      lines.forEach(line => {
+        c.fillText(line, p.x + 18, y);
+        y += lineHeight;
+      });
+
+      if (isHover && !isSelected) {
+        roundedRectPath(c, p.x + 8, p.y + h - 22, Math.min(86, w - 16), 16, 8);
+        c.fillStyle = color + "18";
+        c.fill();
+        c.fillStyle = color;
+        c.font = `700 ${Math.max(9, 10 * view.scale)}px ui-sans-serif, system-ui, sans-serif`;
+        c.fillText("点击查看", p.x + 16, p.y + h - 14);
+      }
+      c.restore();
+    }
+
+    function draw() {
+      resizeCanvas();
+      const scene = scenes[sceneKey];
+      const step = scene.steps[stepIndex];
+      const activeEdges = step.edges || [];
+      const activeSet = new Set([step.focus, selectedNode].filter(Boolean));
+      activeEdges.forEach(([a, b]) => {
+        activeSet.add(a);
+        activeSet.add(b);
+      });
+
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = "#fbfdff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      scene.groups.forEach(g => drawGroup(ctx, g));
+
+      const baseEdges = scene.baseEdges || [];
+      baseEdges.forEach(edge => {
+        const [from, to] = edge;
+        const pts = edgePoints(scene, from, to);
+        if (!pts) return;
+        drawArrow(ctx, pts.start, pts.end, "#94a3b8", 1.2, false);
+      });
+
+      activeEdges.forEach((edge, index) => {
+        const [from, to] = edge;
+        const pts = edgePoints(scene, from, to);
+        if (!pts) return;
+        const color = palette[nodeInfo(scene, to).color] || palette.brand;
+        const curve = drawArrow(ctx, pts.start, pts.end, color, 2.4, true);
+        const t = ((stepElapsed / 1400) * speed + index * 0.18) % 1;
+        const label = index === 0 ? step.tags[0] : "";
+        drawPacket(ctx, curve, t, color, label);
+      });
+
+      Object.keys(scene.nodes).forEach(id => drawNode(ctx, scene, id, activeSet));
+    }
+
+    function tick(now) {
+      const delta = now - lastFrame;
+      lastFrame = now;
+      if (playing) {
+        stepElapsed += delta * speed;
+        if (stepElapsed > stepDuration) {
+          const scene = scenes[sceneKey];
+          setStep((stepIndex + 1) % scene.steps.length);
+        }
+      }
+      draw();
+      requestAnimationFrame(tick);
+    }
+
+    function hitTest(pos) {
+      const scene = scenes[sceneKey];
+      const entries = Object.entries(scene.nodes).reverse();
+      for (const [id, n] of entries) {
+        if (pos.x >= n.x && pos.x <= n.x + n.w && pos.y >= n.y && pos.y <= n.y + n.h) {
+          return id;
+        }
+      }
+      return null;
+    }
+
+    canvas.addEventListener("mousemove", event => {
+      const id = hitTest(canvasToLogical(event.clientX, event.clientY));
+      hoverNode = id;
+      canvas.style.cursor = id ? "pointer" : "default";
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hoverNode = null;
+      canvas.style.cursor = "default";
+    });
+
+    canvas.addEventListener("click", event => {
+      const id = hitTest(canvasToLogical(event.clientX, event.clientY));
+      if (id) {
+        selectedNode = id;
+        renderNodeDetail();
+        const info = nodeInfo(scenes[sceneKey], id);
+        if (info.apiDomain) {
+          activeApiDomain = info.apiDomain;
+          renderApiPanel();
+        }
+      }
+    });
+
+    playBtn.addEventListener("click", () => {
+      playing = !playing;
+      playBtn.textContent = playing ? "Ⅱ" : "▶";
+    });
+
+    prevBtn.addEventListener("click", () => setStep(stepIndex - 1));
+    nextBtn.addEventListener("click", () => setStep(stepIndex + 1));
+    speedRange.addEventListener("input", event => {
+      speed = Number(event.target.value);
+    });
+
+    apiSearchEl.addEventListener("input", event => {
+      apiSearch = event.target.value;
+      renderApiPanel();
+    });
+
+    window.addEventListener("resize", draw);
+
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        roundedRectPath(this, x, y, w, h, r);
+        return this;
+      };
+    }
+
+    initNav();
+    setScene("overview");
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
